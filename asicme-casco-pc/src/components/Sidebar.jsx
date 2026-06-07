@@ -2,7 +2,7 @@ import React from 'react';
 import { Users, Video, WifiOff } from 'lucide-react';
 import { useParticipants } from '@livekit/components-react';
 
-const Sidebar = ({ selectedAgentId, onSelectAgent }) => {
+const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
   // Obtenemos todos los participantes de LiveKit nativamente
   const participants = useParticipants();
   

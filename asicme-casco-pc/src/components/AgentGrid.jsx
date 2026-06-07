@@ -2,7 +2,7 @@ import React from 'react';
 import AgentCard from './AgentCard';
 import { useParticipants } from '@livekit/components-react';
 
-const AgentGrid = ({ selectedAgentId }) => {
+const AgentGrid = ({ selectedAgentId, agentLocations }) => {
   // Obtenemos todos los participantes de LiveKit nativamente
   const participants = useParticipants();
   
