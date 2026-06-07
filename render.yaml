@@ -1,0 +1,15 @@
+services:
+  # Servicio Frontend: Centro de Mando (PC)
+  - type: web
+    name: asicme-casco-pc
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    rootDir: asicme-casco-pc
+    # Las siguientes variables de entorno deben ser reemplazadas en el Dashboard de Render
+    # una vez que despleguemos el backend.
+    envVars:
+      - key: VITE_LIVEKIT_URL
+        value: wss://asicme-casco-xlxbe39o.livekit.cloud
+      - key: VITE_API_URL
+        value: # URL del backend de Render (se dejará vacío por ahora y se llena en la UI de Render)
