@@ -1,0 +1,11 @@
+{
+  "name": "asicme-casco-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:pc": "npm run dev --prefix asicme-casco-pc",
+    "dev:android": "npm run dev --prefix asicme-casco-android",
+    "dev:server": "node server/server.js",
+    "install:all": "npm install --prefix server && npm install --prefix asicme-casco-pc && npm install --prefix asicme-casco-android"
+  }
+}

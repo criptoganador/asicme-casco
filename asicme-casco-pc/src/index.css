@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Custom styles for map simulation */
+.grid-perspective {
+  perspective: 1000px;
+}
+.map-surface {
+  transform: rotateX(60deg) rotateZ(-30deg);
+  transform-style: preserve-3d;
+}
