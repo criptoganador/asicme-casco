@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, Video, WifiOff } from 'lucide-react';
 import { useParticipants } from '@livekit/components-react';
+import MicrophoneSelector from './MicrophoneSelector';
 
 const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
   // Obtenemos todos los participantes de LiveKit nativamente
@@ -90,6 +91,11 @@ const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
             </button>
           ))
         )}
+      </div>
+
+      {/* Selector de Micrófono (solo visible en Electron) */}
+      <div className="mt-auto border-t border-zinc-800 pb-4 pt-3">
+        <MicrophoneSelector />
       </div>
     </aside>
   );
