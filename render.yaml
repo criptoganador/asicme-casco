@@ -13,3 +13,16 @@ services:
         value: wss://asicme-casco-xlxbe39o.livekit.cloud
       - key: VITE_API_URL
         value: # URL del backend de Render (se dejará vacío por ahora y se llena en la UI de Render)
+
+  # Servicio Backend: Generador de Tokens WebRTC (Node.js)
+  - type: web
+    name: asicme-casco-server
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
