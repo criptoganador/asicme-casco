@@ -35,6 +35,7 @@ const AgentGrid = ({ selectedAgentId }) => {
           key={agent.identity} 
           participant={agent} 
           isExpanded={displayedAgents.length === 1}
+          location={agentLocations && agentLocations[agent.identity] ? agentLocations[agent.identity] : null}
         />
       ))}
     </div>

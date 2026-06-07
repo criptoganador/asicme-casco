@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Camera, MapPin, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { VideoTrack, AudioTrack } from '@livekit/components-react';
 
-const AgentCard = ({ participant, isExpanded }) => {
+const AgentCard = ({ participant, isExpanded, location }) => {
   const [isMuted, setIsMuted] = useState(false);
 
   // Obtener los tracks de video y audio del participante real
@@ -73,14 +73,20 @@ const AgentCard = ({ participant, isExpanded }) => {
         )}
       </div>
 
-      {/* Pie de tarjeta - Espacio para GPS */}
+      {/* Pie de tarjeta - GPS */}
       <div className="p-3 bg-zinc-950 flex items-center justify-between text-xs font-mono border-t border-zinc-800/50">
         <div className="flex items-center gap-2 text-zinc-400">
-          <MapPin className="w-4 h-4 text-zinc-500" />
-          <span>[GPS: Pendiente de datos DataChannel]</span>
+          <MapPin className={`w-4 h-4 ${location ? 'text-emerald-500' : 'text-zinc-500'}`} />
+          {location ? (
+            <span className="text-emerald-400 font-bold">
+              GPS: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+            </span>
+          ) : (
+            <span>[GPS: Pendiente de datos]</span>
+          )}
         </div>
         <div className="text-zinc-500">
-          Ubicación Offline
+          {location ? 'Ubicación Activa' : 'Ubicación Offline'}
         </div>
       </div>
     </div>

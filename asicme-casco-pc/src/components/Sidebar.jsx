@@ -75,8 +75,17 @@ const Sidebar = ({ selectedAgentId, onSelectAgent }) => {
                 </span>
               </div>
               <div className="text-xs text-zinc-500 flex items-center gap-2 font-mono">
-                <span>Lat: --</span>
-                <span>Lng: --</span>
+                {agentLocations && agentLocations[agent.identity] ? (
+                  <>
+                    <span>Lat: {agentLocations[agent.identity].lat.toFixed(4)}</span>
+                    <span>Lng: {agentLocations[agent.identity].lng.toFixed(4)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Lat: --</span>
+                    <span>Lng: --</span>
+                  </>
+                )}
               </div>
             </button>
           ))

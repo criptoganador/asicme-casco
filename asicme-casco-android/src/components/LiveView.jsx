@@ -1,18 +1,65 @@
-import React, { useEffect } from 'react';
-import { Mic, MicOff, Camera, CameraOff, PhoneOff } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Mic, MicOff, Camera, CameraOff, PhoneOff, Navigation } from 'lucide-react';
 import { useLocalParticipant, VideoTrack, useRoomContext } from '@livekit/components-react';
+import { Geolocation } from '@capacitor/geolocation';
 
 const LiveView = ({ agentName, onDisconnect }) => {
   const room = useRoomContext();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+  const [gpsActive, setGpsActive] = useState(false);
 
-  // Opcional: Manejar el encendido/apagado de forma imperativa si queremos forzar el inicio
+  // Intentar encender cámara y micro al entrar
   useEffect(() => {
-    // Al montar este componente, nos aseguramos de que intente encender ambos
     if (localParticipant) {
       localParticipant.setCameraEnabled(true).catch(console.error);
       localParticipant.setMicrophoneEnabled(true).catch(console.error);
     }
+  }, [localParticipant]);
+
+  // Transmisión periódica de GPS
+  useEffect(() => {
+    let intervalId;
+
+    const startLocationTracking = async () => {
+      try {
+        // Pedir permiso en Android nativo o navegador
+        const permission = await Geolocation.requestPermissions();
+        if (permission.location !== 'granted') {
+          console.warn('Permiso de GPS denegado');
+          return;
+        }
+
+        setGpsActive(true);
+
+        // Enviar ubicación cada 3 segundos
+        intervalId = setInterval(async () => {
+          try {
+            const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+            const payload = JSON.stringify({
+              type: 'gps',
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+
+            // Enviar por el canal de datos de LiveKit
+            if (localParticipant) {
+              const encoder = new TextEncoder();
+              localParticipant.publishData(encoder.encode(payload), { reliable: false });
+            }
+          } catch (e) {
+            console.error('Error obteniendo GPS', e);
+          }
+        }, 3000);
+      } catch (e) {
+        console.error('Error inicializando GPS', e);
+      }
+    };
+
+    startLocationTracking();
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [localParticipant]);
 
   const toggleMic = () => {
@@ -44,9 +91,17 @@ const LiveView = ({ agentName, onDisconnect }) => {
           <span className="text-xs font-mono text-zinc-500">OPERADOR</span>
           <span className="font-bold text-lg text-zinc-100">{agentName}</span>
         </div>
-        <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/20">
-          <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
-          <span className="text-xs font-bold text-red-500 tracking-wider">EN VIVO</span>
+        <div className="flex items-center gap-2">
+          {gpsActive && (
+            <div className="flex items-center gap-1 bg-emerald-500/10 px-2 py-1.5 rounded-full border border-emerald-500/20">
+              <Navigation className="w-3 h-3 text-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-500 tracking-wider">GPS</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/20">
+            <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+            <span className="text-xs font-bold text-red-500 tracking-wider">EN VIVO</span>
+          </div>
         </div>
       </div>
 
