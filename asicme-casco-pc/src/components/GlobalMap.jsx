@@ -66,13 +66,13 @@ const GlobalMap = ({ agentLocations }) => {
       <MapContainer 
         center={mapCenter} 
         zoom={mapZoom} 
-        className="w-full h-full z-0"
+        style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0 }}
         zoomControl={true}
       >
-        {/* Usamos el mapa oscuro de CartoDB para mantener la estética táctica */}
+        {/* Usamos el mapa estándar de OpenStreetMap para asegurar visibilidad */}
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         {agents.map((agent) => {
