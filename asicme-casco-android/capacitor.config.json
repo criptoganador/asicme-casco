@@ -1,5 +1,15 @@
 {
   "appId": "com.asicme.casco",
-  "appName": "asicme-casco-android",
-  "webDir": "dist"
+  "appName": "AsicMe Casco",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "backgroundColor": "#09090b",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    }
+  }
 }

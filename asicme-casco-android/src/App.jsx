@@ -3,18 +3,56 @@ import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
 import LoginView from './components/LoginView';
 import LiveView from './components/LiveView';
+import SplashScreen from './components/SplashScreen';
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
   const [agentName, setAgentName] = useState('');
   const [token, setToken] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
+  const [cameraConfig, setCameraConfig] = useState(undefined);
+
+  const getBestCamera = async () => {
+    try {
+      // 1. Pedir permiso para obtener los nombres reales de las cámaras
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      
+      // 2. Enumerar todas las cámaras
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      // 3. Buscar cámara externa (USB/UVC)
+      const externalCam = videoDevices.find(d => 
+        d.label.toLowerCase().includes('usb') || 
+        d.label.toLowerCase().includes('uvc') ||
+        d.label.toLowerCase().includes('external')
+      );
+
+      // Apagar la cámara temporal usada para el permiso
+      stream.getTracks().forEach(track => track.stop());
+
+      if (externalCam) {
+        console.log('Cámara externa detectada:', externalCam.label);
+        return { deviceId: externalCam.deviceId };
+      }
+      
+      // 4. Fallback a cámara trasera
+      console.log('Usando cámara trasera por defecto');
+      return { facingMode: 'environment' };
+    } catch (e) {
+      console.warn('Error detectando cámaras, usando trasera por defecto:', e);
+      return { facingMode: 'environment' };
+    }
+  };
 
   const handleConnect = async (name) => {
     setIsConnecting(true);
     setError('');
     
     try {
+      const bestCam = await getBestCamera();
+      
       // Usamos la misma sala que la app de PC
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/token?roomName=vigilancia-global&participantName=${encodeURIComponent(name)}`);
       
@@ -25,6 +63,7 @@ function App() {
       const data = await response.json();
       
       if (data.token) {
+        setCameraConfig(bestCam);
         setToken(data.token);
         setAgentName(name);
       } else {
@@ -45,6 +84,7 @@ function App() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-zinc-950 font-sans">
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
       {!token ? (
         <div className="relative h-full">
           {isConnecting && (
@@ -66,6 +106,9 @@ function App() {
         <LiveKitRoom
           video={true} // Empezar a transmitir cámara
           audio={true} // Empezar a transmitir micrófono
+          options={{
+            videoCaptureDefaults: cameraConfig || { facingMode: 'environment' }
+          }}
           token={token}
           serverUrl={import.meta.env.VITE_LIVEKIT_URL}
           className="h-full w-full"
