@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Mic, MicOff, Camera, CameraOff, PhoneOff, Navigation } from 'lucide-react';
-import { useLocalParticipant, VideoTrack, useRoomContext } from '@livekit/components-react';
+import { useLocalParticipant, VideoTrack, useRoomContext, RoomAudioRenderer } from '@livekit/components-react';
 import { Geolocation } from '@capacitor/geolocation';
 
 const LiveView = ({ agentName, onDisconnect }) => {
@@ -89,6 +89,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
 
   return (
     <div className="flex flex-col h-full bg-zinc-950">
+      <RoomAudioRenderer />
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 bg-zinc-900 border-b border-zinc-800 z-10">
         <div className="flex flex-col">
