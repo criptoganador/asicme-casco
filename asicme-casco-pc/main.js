@@ -1,5 +1,9 @@
-const { app, BrowserWindow, session, systemPreferences, ipcMain } = require('electron');
-const path = require('path');
+import { app, BrowserWindow, session, systemPreferences, ipcMain } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ─────────────────────────────────────────────────────────────
 // CAPA 1: Auto-aprobación de permisos en la sesión de Chromium
@@ -118,8 +122,14 @@ function createWindow() {
     },
   });
 
-  // CAPA 3: Carga del frontend empaquetado localmente
-  win.loadURL('https://asicme-casco-frontend.onrender.com');
+  // CAPA 3: Carga del frontend
+  if (!app.isPackaged) {
+    // En desarrollo con Vite
+    win.loadURL('http://localhost:5173');
+  } else {
+    // En producción / Electron empaquetado
+    win.loadURL('https://asicme-casco-frontend.onrender.com');
+  }
 
   // Descomenta la siguiente línea para abrir DevTools en desarrollo:
   // win.webContents.openDevTools();

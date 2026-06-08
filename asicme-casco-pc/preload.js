@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+import { contextBridge, ipcRenderer } from 'electron';
 
 // Exponemos de forma segura las funciones de Electron al frontend (React)
 // Solo lo que explícitamente listemos aquí será accesible desde window.electronAPI
