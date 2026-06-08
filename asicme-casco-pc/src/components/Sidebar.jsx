@@ -10,15 +10,15 @@ const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
   const agents = participants.filter(p => p.identity !== 'CommandCenter');
 
   return (
-    <aside className="w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col h-full shadow-2xl z-20">
-      <div className="p-6 border-b border-zinc-800 bg-zinc-950/50">
+    <aside className="w-80 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 border-r border-emerald-500/10 flex flex-col h-full shadow-2xl shadow-black/40 z-20">
+      <div className="p-6 border-b border-emerald-500/10 bg-zinc-950/95 backdrop-blur-sm">
         <h1 className="text-2xl font-bold text-zinc-100 flex items-center gap-3 tracking-tight">
-          <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center border border-emerald-500/30">
-            <Video className="w-5 h-5 text-emerald-500" />
+          <div className="w-10 h-10 bg-emerald-500/15 rounded-2xl flex items-center justify-center border border-emerald-500/25 shadow-sm shadow-emerald-500/10">
+            <Video className="w-5 h-5 text-emerald-400" />
           </div>
           AsicMe Casco
         </h1>
-        <p className="text-zinc-500 text-sm mt-2 ml-11 font-mono">Centro de Mando PC</p>
+        <p className="text-emerald-300 text-sm mt-2 ml-12 font-mono uppercase tracking-[0.18em]">Centro de Mando PC</p>
       </div>
 
       <div className="p-4">
@@ -40,19 +40,29 @@ const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
           <div className="absolute inset-0 flex items-center" aria-hidden="true">
             <div className="w-full border-t border-zinc-800"></div>
           </div>
-          <div className="relative flex justify-center">
-            <span className="bg-zinc-900 px-3 text-xs font-medium text-zinc-500 tracking-wider">
-              AGENTES EN VIVO ({agents.length})
+          <div className="relative flex flex-col items-center gap-2 pt-3">
+            <span className="bg-emerald-500/15 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.28em] text-emerald-300 shadow-sm shadow-emerald-500/5">
+              AGENTES EN VIVO
             </span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-zinc-950/80 px-3 py-1 text-xs text-emerald-200 font-medium tracking-[0.14em]">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_8px_rgba(16,185,129,0.08)]"></span>
+              {agents.length} conectado{agents.length === 1 ? '' : 's'}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
         {agents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-zinc-600">
-            <WifiOff className="w-8 h-8 mb-2 opacity-50" />
-            <p className="text-sm font-medium">No hay transmisiones activas</p>
+          <div className="flex h-52 flex-col items-center justify-center rounded-[2rem] border border-emerald-500/10 bg-zinc-950/85 p-6 text-center shadow-xl shadow-emerald-500/5">
+            <WifiOff className="w-12 h-12 mb-3 text-emerald-400/80" />
+            <p className="text-lg font-semibold text-zinc-100">Sin transmisiones activas</p>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              Los agentes aparecerán aquí cuando estén conectados y transmitiendo en vivo.
+            </p>
+            <p className="mt-4 text-xs uppercase tracking-[0.2em] text-emerald-300">
+              Comprueba la conexión de LiveKit
+            </p>
           </div>
         ) : (
           agents.map((agent) => (
@@ -66,12 +76,15 @@ const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className={`font-semibold ${selectedAgentId === agent.identity ? 'text-emerald-400' : 'text-zinc-200'}`}>
+                <span className={`font-semibold ${selectedAgentId === agent.identity ? 'text-emerald-300' : 'text-zinc-200'}`}>
                   {agent.name || agent.identity}
                 </span>
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-emerald-300 font-semibold">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  activo
                 </span>
               </div>
               <div className="text-xs text-zinc-500 flex items-center gap-2 font-mono">
