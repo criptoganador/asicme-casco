@@ -52,12 +52,22 @@ function App() {
     
     try {
       const bestCam = await getBestCamera();
-      
+
+      // Validar que la URL del servidor esté configurada
+      const apiUrl = import.meta.env.VITE_API_URL;
+      if (!apiUrl) {
+        throw new Error('Servidor no configurado. Contacta al administrador.');
+      }
+
       // Usamos la misma sala que la app de PC
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/token?roomName=vigilancia-global&participantName=${encodeURIComponent(name)}`);
+      const response = await fetch(
+        `${apiUrl}/api/token?roomName=vigilancia-global&participantName=${encodeURIComponent(name)}`
+      );
       
-      if (!response.ok) {
-        throw new Error('No se pudo conectar al servidor');
+      // Verificar que la respuesta sea JSON y no una página HTML de error
+      const contentType = response.headers.get('content-type') || '';
+      if (!response.ok || !contentType.includes('application/json')) {
+        throw new Error(`Error del servidor (${response.status}). Verifica que el servidor esté activo.`);
       }
       
       const data = await response.json();
@@ -67,11 +77,16 @@ function App() {
         setToken(data.token);
         setAgentName(name);
       } else {
-        throw new Error('Token no recibido');
+        throw new Error('El servidor no devolvió un token válido.');
       }
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Error de conexión');
+      // Diferenciar errores de red vs errores de lógica
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('No se pudo contactar al servidor. Verifica tu conexión a internet.');
+      } else {
+        setError(err.message || 'Error de conexión desconocido.');
+      }
     } finally {
       setIsConnecting(false);
     }
