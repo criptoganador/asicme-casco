@@ -25,7 +25,11 @@ const AgentGrid = ({ selectedAgentId, agentLocations }) => {
   }
 
   return (
-    <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-zinc-100 grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 content-start items-start">
+    <div className={`flex-1 p-6 overflow-y-auto custom-scrollbar ${
+      displayedAgents.length === 1 
+        ? 'flex items-center justify-center' 
+        : 'grid gap-6 grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 auto-rows-max'
+    }`}>
       {displayedAgents.map(agent => (
         <AgentCard 
           key={agent.identity} 
