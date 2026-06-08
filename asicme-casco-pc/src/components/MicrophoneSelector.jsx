@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mic, ChevronDown } from 'lucide-react';
 
 /**
@@ -25,7 +25,7 @@ const MicrophoneSelector = () => {
         if (audioDevices.length > 0) {
           setSelected(audioDevices[0].deviceId);
         }
-      } catch (e) {
+      } catch {
         // Fallback: usar la API nativa del navegador
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });

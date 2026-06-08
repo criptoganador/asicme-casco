@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Camera, MapPin, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { VideoTrack, AudioTrack } from '@livekit/components-react';
 

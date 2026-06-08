@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { LiveKitRoom, useDataChannel, useLocalParticipant } from '@livekit/components-react';
 import { LayoutGrid, Map as MapIcon } from 'lucide-react';
 import '@livekit/components-styles';

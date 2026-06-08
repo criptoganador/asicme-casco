@@ -1,4 +1,4 @@
-import React from 'react';
+
 import AgentCard from './AgentCard';
 import { useParticipants } from '@livekit/components-react';
 
