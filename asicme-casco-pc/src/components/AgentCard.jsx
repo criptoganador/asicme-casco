@@ -10,49 +10,12 @@ const AgentCard = ({ participant, isExpanded, location }) => {
   const audioTrackRef = Array.from(participant.audioTrackPublications.values()).find(p => p.source === 'microphone');
 
   return (
-    <div className={`flex flex-col bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl transition-all ${
-      isExpanded ? 'w-full max-w-5xl aspect-video' : 'h-[400px]'
+    <div className={`relative bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl transition-all group ${
+      isExpanded ? 'w-full h-full' : 'aspect-video min-h-[300px]'
     }`}>
       
-      {/* Encabezado de la tarjeta */}
-      <div className="flex items-center justify-between p-3 bg-zinc-950/50 border-b border-zinc-800/50">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center border border-zinc-700">
-            <Camera className="w-4 h-4 text-zinc-400" />
-          </div>
-          <div>
-            <h3 className="text-zinc-100 font-semibold leading-tight flex items-center gap-2">
-              {participant.name || participant.identity}
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-            </h3>
-            <p className="text-emerald-500 text-xs font-mono">TRANSMITIENDO</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* Botón Mute Local */}
-          <button 
-            onClick={() => setIsMuted(!isMuted)}
-            className={`p-2 rounded-lg transition-colors ${
-              isMuted ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700'
-            }`}
-            title={isMuted ? "Activar Audio" : "Silenciar Audio"}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          {!isExpanded && (
-            <button className="p-2 text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors">
-              <Maximize2 className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Contenedor de Video Real */}
-      <div className="relative flex-1 bg-black overflow-hidden group">
+      {/* Contenedor de Video (Fondo Completo) */}
+      <div className="absolute inset-0 bg-black">
         {videoTrackRef ? (
           <VideoTrack
             trackRef={{ participant, source: 'camera', publication: videoTrackRef }}
@@ -60,8 +23,8 @@ const AgentCard = ({ participant, isExpanded, location }) => {
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-700">
-            <Camera className="w-12 h-12 mb-2 opacity-30" />
-            <p className="font-mono text-sm">Esperando Feed de Video...</p>
+            <Camera className="w-16 h-16 mb-4 opacity-30 animate-pulse" />
+            <p className="font-mono text-sm tracking-widest uppercase">Esperando Video...</p>
           </div>
         )}
 
@@ -73,21 +36,66 @@ const AgentCard = ({ participant, isExpanded, location }) => {
         )}
       </div>
 
-      {/* Pie de tarjeta - GPS */}
-      <div className="p-3 bg-zinc-950 flex items-center justify-between text-xs font-mono border-t border-zinc-800/50">
-        <div className="flex items-center gap-2 text-zinc-400">
-          <MapPin className={`w-4 h-4 ${location ? 'text-emerald-500' : 'text-zinc-500'}`} />
-          {location ? (
-            <span className="text-emerald-400 font-bold">
-              GPS: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+      {/* Sombra (Degradado Oscuro Inferior) para Legibilidad */}
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
+
+      {/* Controles Superiores Flotantes (Solo visibles en Hover si no está expandido) */}
+      {!isExpanded && (
+        <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button className="p-2 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-lg transition-all">
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Información Inferior Flotante (Estilo Google Meet) */}
+      <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between z-10">
+        
+        {/* Izquierda: Nombre y Estado */}
+        <div className="flex flex-col gap-1.5">
+          {/* Badge de estado en vivo */}
+          <div className="flex items-center gap-1.5 bg-red-500/20 text-red-500 backdrop-blur-md px-2 py-1 rounded-md w-max border border-red-500/30">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
             </span>
-          ) : (
-            <span>[GPS: Pendiente de datos]</span>
-          )}
+            <span className="text-[10px] font-bold tracking-widest">EN VIVO</span>
+          </div>
+          
+          {/* Nombre y GPS en Glassmorphism */}
+          <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10">
+            <span className="text-white font-medium text-sm md:text-base">
+              {participant.name || participant.identity}
+            </span>
+            <div className="w-px h-4 bg-white/20"></div>
+            <div className="flex items-center gap-1 text-xs font-mono">
+              <MapPin className={`w-3.5 h-3.5 ${location ? 'text-emerald-400' : 'text-zinc-500'}`} />
+              {location ? (
+                <span className="text-emerald-300">
+                  {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                </span>
+              ) : (
+                <span className="text-zinc-500">Sin GPS</span>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="text-zinc-500">
-          {location ? 'Ubicación Activa' : 'Ubicación Offline'}
+
+        {/* Derecha: Controles Principales */}
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setIsMuted(!isMuted)}
+            className={`p-3 rounded-full transition-all backdrop-blur-md border ${
+              isMuted 
+                ? 'bg-red-500/80 text-white border-red-500 hover:bg-red-600' 
+                : 'bg-black/40 text-white/80 border-white/10 hover:bg-black/60 hover:text-white'
+            }`}
+            title={isMuted ? "Activar Audio" : "Silenciar Audio"}
+          >
+            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </button>
         </div>
+
       </div>
     </div>
   );
