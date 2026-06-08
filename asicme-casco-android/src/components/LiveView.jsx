@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mic, MicOff, Camera, CameraOff, PhoneOff, Navigation } from 'lucide-react';
 import { useLocalParticipant, VideoTrack, useRoomContext } from '@livekit/components-react';
 import { Geolocation } from '@capacitor/geolocation';
@@ -7,6 +7,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
   const room = useRoomContext();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
   const [gpsActive, setGpsActive] = useState(false);
+  const [gpsError, setGpsError] = useState(false);
 
   // Intentar encender cámara y micro al entrar
   useEffect(() => {
@@ -26,6 +27,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
         const permission = await Geolocation.requestPermissions();
         if (permission.location !== 'granted') {
           console.warn('Permiso de GPS denegado');
+          setGpsError(true);
           return;
         }
 
@@ -46,8 +48,10 @@ const LiveView = ({ agentName, onDisconnect }) => {
               const encoder = new TextEncoder();
               localParticipant.publishData(encoder.encode(payload), { reliable: false });
             }
+            setGpsError(false);
           } catch (e) {
             console.error('Error obteniendo GPS', e);
+            setGpsError(true);
           }
         }, 3000);
       } catch (e) {
@@ -92,10 +96,16 @@ const LiveView = ({ agentName, onDisconnect }) => {
           <span className="font-bold text-lg text-zinc-100">{agentName}</span>
         </div>
         <div className="flex items-center gap-2">
-          {gpsActive && (
+          {gpsActive && !gpsError && (
             <div className="flex items-center gap-1 bg-emerald-500/10 px-2 py-1.5 rounded-full border border-emerald-500/20">
               <Navigation className="w-3 h-3 text-emerald-500 animate-pulse" />
               <span className="text-[10px] font-bold text-emerald-500 tracking-wider">GPS</span>
+            </div>
+          )}
+          {gpsError && (
+            <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-1.5 rounded-full border border-amber-500/20">
+              <Navigation className="w-3 h-3 text-amber-500 opacity-50" />
+              <span className="text-[10px] font-bold text-amber-500 tracking-wider">GPS ERROR</span>
             </div>
           )}
           <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/20">
