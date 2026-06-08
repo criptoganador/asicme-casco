@@ -16,10 +16,17 @@ const AgentGrid = ({ selectedAgentId, agentLocations }) => {
 
   if (displayedAgents.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 h-full">
-        <div className="w-16 h-16 border-4 border-dashed border-zinc-700 rounded-full mb-4 animate-[spin_10s_linear_infinite]"></div>
-        <p className="text-lg">Esperando transmisiones en vivo...</p>
-        <p className="text-sm mt-2 opacity-50">Los agentes aparecerán aquí automáticamente</p>
+      <div className="flex-1 flex flex-col items-center justify-center h-full px-6">
+        <div className="max-w-xl w-full rounded-[2rem] border border-zinc-800 bg-zinc-950/95 p-10 text-center shadow-2xl shadow-black/20">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-zinc-900 border border-emerald-500/20 mb-5">
+            <span className="text-3xl font-bold text-emerald-400">•</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-zinc-100">Sin transmisiones activas</h2>
+          <p className="mt-3 text-sm leading-6 text-zinc-500">
+            Verifica que los agentes estén conectados al canal de LiveKit. Cuando haya transmisiones, aparecerán aquí en tiempo real.
+          </p>
+          <p className="mt-4 text-xs uppercase tracking-[0.2em] text-emerald-300">Asegúrate de tener agentes online</p>
+        </div>
       </div>
     );
   }
