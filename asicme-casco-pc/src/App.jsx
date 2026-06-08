@@ -1,10 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { LiveKitRoom, useDataChannel } from '@livekit/components-react';
+import { LiveKitRoom, useDataChannel, useLocalParticipant } from '@livekit/components-react';
 import { LayoutGrid, Map as MapIcon } from 'lucide-react';
 import '@livekit/components-styles';
 import Sidebar from './components/Sidebar';
 import AgentGrid from './components/AgentGrid';
 import GlobalMap from './components/GlobalMap';
+
+function MicrophoneController() {
+  const { localParticipant } = useLocalParticipant();
+
+  useEffect(() => {
+    // Encender micrófono al entrar
+    if (localParticipant) {
+      localParticipant.setMicrophoneEnabled(true).catch(e => console.warn('Error auto-activando mic:', e));
+    }
+
+    // Escuchar cambios desde MicrophoneSelector
+    const handleMicChange = (e) => {
+      const deviceId = e.detail?.deviceId;
+      if (localParticipant && deviceId) {
+        // Cambiar el dispositivo y asegurar que esté encendido
+        localParticipant.setMicrophoneEnabled(true, { deviceId }).catch(console.error);
+      }
+    };
+
+    window.addEventListener('microphone-changed', handleMicChange);
+    return () => window.removeEventListener('microphone-changed', handleMicChange);
+  }, [localParticipant]);
+
+  return null;
+}
 
 function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab }) {
   const [agentLocations, setAgentLocations] = useState({});
@@ -113,6 +138,7 @@ function App() {
           serverUrl={import.meta.env.VITE_LIVEKIT_URL}
           style={{ '--lk-bg': 'transparent' }}
         >
+          <MicrophoneController />
           <MainLayout 
             selectedAgentId={selectedAgentId}
             onSelectAgent={handleSelectAgent}
