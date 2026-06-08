@@ -3,6 +3,7 @@
   "productName": "AsicMe Casco",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "Centro de Mando - Sistema de Vigilancia AsicMe Casco",
   "main": "main.js",
   "scripts": {
