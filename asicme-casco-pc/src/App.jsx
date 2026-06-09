@@ -39,6 +39,7 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
   useDataChannel((msg) => {
     try {
       const payload = JSON.parse(new TextDecoder().decode(msg.payload));
+      console.log('[LiveKit] DataChannel recibido:', msg.from?.identity, payload);
       if (payload.type === 'gps' && msg.from) {
         setAgentLocations(prev => ({
           ...prev,

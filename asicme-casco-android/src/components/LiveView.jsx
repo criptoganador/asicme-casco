@@ -47,6 +47,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
             if (localParticipant) {
               const encoder = new TextEncoder();
               localParticipant.publishData(encoder.encode(payload), { reliable: false });
+              console.log('[GPS] Enviado payload:', payload);
             }
             setGpsError(false);
           } catch (e) {
