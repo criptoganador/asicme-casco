@@ -3,7 +3,7 @@ import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin, Layers } from '
 import { useDataChannel, VideoTrack, AudioTrack } from '@livekit/components-react';
 import { MapContainer, TileLayer, Marker as LeafletMarker, Popup as LeafletPopup, useMap } from 'react-leaflet';
 import mapboxgl from 'mapbox-gl';
-import Map, { Marker as MapboxMarker } from 'react-map-gl/mapbox';
+import Map, { Marker as MapboxMarker, NavigationControl, FullscreenControl } from 'react-map-gl/mapbox';
 import L from 'leaflet';
 
 // Fix para el error "import.meta outside a module" de Vite con Mapbox GL v3
@@ -309,6 +309,8 @@ const AgentCard = ({ participant, isExpanded }) => {
                       }
                     }}
                   >
+                    <FullscreenControl position="top-left" />
+                    <NavigationControl position="bottom-right" />
                     <MapboxMarker 
                       longitude={Number(displayCoords.longitude) || 0} 
                       latitude={Number(displayCoords.latitude) || 0}
