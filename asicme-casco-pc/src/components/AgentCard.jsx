@@ -12,7 +12,12 @@ const AgentCard = ({ participant, isExpanded }) => {
   useDataChannel((msg) => {
     try {
       const payload = JSON.parse(new TextDecoder().decode(msg.payload));
-      if (msg.from?.identity === participant.identity && payload.type === 'gps') {
+      const nombreEnTarjeta = String(participant.identity || '').toLowerCase();
+      const nombreRemitente = String(msg.from?.identity || '').toLowerCase();
+
+      console.log(`[LiveKit] DataChannel recibido de: ${msg.from?.identity}`, payload);
+
+      if (nombreRemitente === nombreEnTarjeta && payload.type === 'gps') {
         setAgentCoords({
           latitude: payload.latitude,
           longitude: payload.longitude,
