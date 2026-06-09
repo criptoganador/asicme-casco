@@ -1,5 +1,6 @@
 
 import AgentCard from './AgentCard';
+import GlobalMap from './GlobalMap';
 import { useParticipants } from '@livekit/components-react';
 
 const AgentGrid = ({ selectedAgentId, agentLocations }) => {
@@ -25,6 +26,35 @@ const AgentGrid = ({ selectedAgentId, agentLocations }) => {
           <p className="mt-3 text-sm leading-6 text-slate-500">
             Verifica que los agentes estén conectados al canal de LiveKit. Cuando haya transmisiones, aparecerán aquí en tiempo real.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedAgentId && displayedAgents.length === 1) {
+    return (
+      <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-slate-50/10">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <AgentCard
+            key={displayedAgents[0].identity}
+            participant={displayedAgents[0]}
+            isExpanded={true}
+            location={agentLocations && agentLocations[displayedAgents[0].identity] ? agentLocations[displayedAgents[0].identity] : null}
+          />
+
+          <div className="flex flex-col gap-4">
+            <div className="rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 overflow-hidden min-h-[520px]">
+              <div className="bg-slate-50 border-b border-slate-200 px-5 py-4">
+                <h2 className="text-lg font-semibold text-slate-900">Ubicación del agente</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Mapa del agente seleccionado y su localización en tiempo real.
+                </p>
+              </div>
+              <div className="h-[480px] w-full">
+                <GlobalMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

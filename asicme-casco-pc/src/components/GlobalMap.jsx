@@ -27,18 +27,19 @@ const createCustomIcon = (isLive, hasLocation) => {
   });
 };
 
-const GlobalMap = ({ agentLocations }) => {
+const GlobalMap = ({ agentLocations, selectedAgentId }) => {
   const participants = useParticipants();
   
   // Filtramos al Operador (CommandCenter)
   const agents = participants.filter(p => p.identity !== 'CommandCenter');
+  const displayedAgents = selectedAgentId ? agents.filter(agent => agent.identity === selectedAgentId) : agents;
 
   // Centro por defecto (ej: Centro de México o 0,0 si prefieres todo el mundo)
   const defaultCenter = [19.4326, -99.1332]; 
-  const defaultZoom = 3;
+  const defaultZoom = selectedAgentId ? 12 : 3;
 
-  // Buscamos si al menos un agente tiene ubicación para centrar la cámara ahí
-  const validLocations = agents
+  // Buscar la ubicación del agente o de los agentes mostrados
+  const validLocations = displayedAgents
     .map(a => agentLocations?.[a.identity])
     .filter(loc => loc && loc.lat !== undefined && loc.lng !== undefined);
   
@@ -46,8 +47,11 @@ const GlobalMap = ({ agentLocations }) => {
     ? [validLocations[0].lat, validLocations[0].lng] 
     : defaultCenter;
   
-  // Si tenemos a alguien activo, hacemos zoom más cercano
-  const mapZoom = validLocations.length > 0 ? 14 : defaultZoom;
+  const mapZoom = validLocations.length > 0 ? (selectedAgentId ? 14 : 3) : defaultZoom;
+  const title = selectedAgentId ? 'RADAR DEL AGENTE' : 'RADAR TÁCTICO GLOBAL';
+  const subtitle = selectedAgentId
+    ? `Ubicación de ${displayedAgents[0]?.name || displayedAgents[0]?.identity || 'este agente'}`
+    : `SISTEMA ACTIVO • ${agents.length} AGENTES MONITOREADOS`;
 
   return (
     <div className="flex-1 relative w-full h-full bg-white">
@@ -55,10 +59,10 @@ const GlobalMap = ({ agentLocations }) => {
       {/* HUD Superior (Z-Index alto para estar sobre el mapa) */}
       <div className="absolute top-6 left-6 z-[1000] flex flex-col gap-2 pointer-events-none">
         <h2 className="text-2xl font-bold text-slate-900 tracking-wider drop-shadow-sm">
-          RADAR TÁCTICO GLOBAL
+          {title}
         </h2>
         <div className="text-sm font-mono text-emerald-600 animate-pulse drop-shadow-sm bg-white/70 backdrop-blur-md px-3 py-1.5 rounded-lg w-fit border border-emerald-200">
-          SISTEMA ACTIVO • {agents.length} AGENTES MONITOREADOS
+          {subtitle}
         </div>
       </div>
 
@@ -75,7 +79,7 @@ const GlobalMap = ({ agentLocations }) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {agents.map((agent) => {
+        {displayedAgents.map((agent) => {
           const location = agentLocations?.[agent.identity];
           
           // Si no tiene ubicación aún, no lo dibujamos en el mapa real
