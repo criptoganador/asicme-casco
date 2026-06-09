@@ -245,6 +245,7 @@ const AgentCard = ({ participant, isExpanded }) => {
                 ) : (
                   <Map
                     mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
+                    maxZoom={24}
                     initialViewState={{
                       longitude: Number(displayCoords.longitude) || 0,
                       latitude: Number(displayCoords.latitude) || 0,
