@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Shield } from 'lucide-react';
+import { Shield, Wifi, ChevronDown, ChevronUp } from 'lucide-react';
 
 const LoginView = ({ onConnect }) => {
   const [agentName, setAgentName] = useState('');
+  const [showIpOptions, setShowIpOptions] = useState(false);
+  const [ipCamUrl, setIpCamUrl] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (agentName.trim().length > 0) {
-      onConnect(agentName.trim());
+      onConnect(agentName.trim(), ipCamUrl.trim());
     }
   };
 
@@ -25,6 +27,7 @@ const LoginView = ({ onConnect }) => {
         <p className="text-zinc-500 mb-10 text-center">Transmisión de campo en tiempo real</p>
 
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+          {/* Campo: Nombre del agente */}
           <div className="flex flex-col gap-2">
             <label htmlFor="agentName" className="text-sm font-medium text-zinc-400 ml-1">
               Nombre del Agente
@@ -39,6 +42,38 @@ const LoginView = ({ onConnect }) => {
               required
             />
           </div>
+
+          {/* Sección: Cámara IP (expandible) */}
+          <button
+            type="button"
+            onClick={() => setShowIpOptions(!showIpOptions)}
+            className="flex items-center justify-between w-full text-sm text-zinc-500 hover:text-zinc-300 transition-colors py-1 px-1"
+          >
+            <span className="flex items-center gap-2">
+              <Wifi className="w-4 h-4" />
+              Usar cámara IP / Wi-Fi (opcional)
+            </span>
+            {showIpOptions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+
+          {showIpOptions && (
+            <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
+              <label htmlFor="ipCamUrl" className="text-xs font-medium text-zinc-400 ml-1">
+                URL de la cámara <span className="text-zinc-600">(HLS, RTSP vía proxy, o HTTP)</span>
+              </label>
+              <input
+                id="ipCamUrl"
+                type="url"
+                value={ipCamUrl}
+                onChange={(e) => setIpCamUrl(e.target.value)}
+                placeholder="http://192.168.1.100/stream.m3u8"
+                className="w-full bg-zinc-900 border-2 border-zinc-800 rounded-2xl px-5 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-sky-500 transition-colors shadow-inner"
+              />
+              <p className="text-[11px] text-zinc-600 ml-1">
+                💡 Para RTSP usa un proxy HLS (ej. Mediamtx). Soporta: HLS (.m3u8), HTTP streams, WebRTC relays.
+              </p>
+            </div>
+          )}
 
           <button
             type="submit"

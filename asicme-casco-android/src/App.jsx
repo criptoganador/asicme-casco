@@ -12,6 +12,7 @@ function App() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
   const [cameraConfig, setCameraConfig] = useState(undefined);
+  const [rtspUrl, setRtspUrl] = useState('');
 
   const getBestCamera = async () => {
     try {
@@ -22,11 +23,15 @@ function App() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
       
-      // 3. Buscar cámara externa (USB/UVC)
-      const externalCam = videoDevices.find(d => 
-        d.label.toLowerCase().includes('usb') || 
-        d.label.toLowerCase().includes('uvc') ||
-        d.label.toLowerCase().includes('external')
+      // 3. Buscar cámara externa (USB/UVC/HDMI capturador)
+      const EXTERNAL_KEYWORDS = [
+        'usb', 'uvc', 'external',
+        'capture', 'hdmi', 'elgato', 'magewell', 'avermedia',
+        'cam link', 'camlink', 'video capture', 'capture card',
+        'obs virtual', 'manycam', 'droidcam'
+      ];
+      const externalCam = videoDevices.find(d =>
+        EXTERNAL_KEYWORDS.some(kw => d.label.toLowerCase().includes(kw))
       );
 
       // Apagar la cámara temporal usada para el permiso
@@ -59,12 +64,20 @@ function App() {
     }
   };
 
-  const handleConnect = async (name) => {
+  const handleConnect = async (name, ipCamUrl = '') => {
     setIsConnecting(true);
     setError('');
     
     try {
-      const bestCam = await getBestCamera();
+      // Si el usuario ingresó una URL de cámara IP, la usamos directamente
+      let bestCam;
+      if (ipCamUrl) {
+        setRtspUrl(ipCamUrl);
+        bestCam = null; // LiveView manejará el stream por canvas
+      } else {
+        setRtspUrl('');
+        bestCam = await getBestCamera();
+      }
 
       // Validar que la URL del servidor esté configurada
       const apiUrl = import.meta.env.VITE_API_URL;
@@ -132,8 +145,8 @@ function App() {
         </div>
       ) : (
         <LiveKitRoom
-          video={true} // Empezar a transmitir cámara
-          audio={true} // Empezar a transmitir micrófono
+          video={!rtspUrl} // Si es cámara IP, desactivamos la captura estándar
+          audio={true}
           options={{
             videoCaptureDefaults: cameraConfig || { facingMode: 'environment' }
           }}
@@ -142,7 +155,7 @@ function App() {
           className="h-full w-full"
           onDisconnected={handleDisconnect}
         >
-          <LiveView agentName={agentName} onDisconnect={handleDisconnect} />
+          <LiveView agentName={agentName} onDisconnect={handleDisconnect} rtspUrl={rtspUrl} />
         </LiveKitRoom>
       )}
     </div>

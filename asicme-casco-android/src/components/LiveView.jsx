@@ -1,47 +1,39 @@
-import { useEffect, useState } from 'react';
-import { Mic, MicOff, Camera, CameraOff, PhoneOff, Navigation } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Mic, MicOff, Camera, CameraOff, PhoneOff, Navigation, Wifi } from 'lucide-react';
 import { useLocalParticipant, VideoTrack, useRoomContext, RoomAudioRenderer } from '@livekit/components-react';
 import { Geolocation } from '@capacitor/geolocation';
+import { LocalVideoTrack } from 'livekit-client';
 
-const LiveView = ({ agentName, onDisconnect }) => {
+const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   const room = useRoomContext();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsError, setGpsError] = useState(false);
+  const [ipCamError, setIpCamError] = useState(false);
+  const [ipCamActive, setIpCamActive] = useState(false);
+
+  // Refs para el modo cámara IP
+  const ipVideoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const ipTrackRef = useRef(null);
+  const rafRef = useRef(null);
 
   // La cámara y el micro se inicializan automáticamente por <LiveKitRoom video={true} audio={true}>
 
-
+  // ─── GPS ────────────────────────────────────────────────────────────────────
   const iniciarTransmisionGPS = async (room) => {
-    console.log('📡 Intentando iniciar el GPS...');
-
     try {
-      // 1. Verificar y pedir permisos explícitamente
       const check = await Geolocation.checkPermissions();
-      console.log('🛡️ Estado de permisos GPS:', check);
-      
       if (check.location !== 'granted') {
-        console.log('⚠️ Pidiendo permisos al usuario...');
         const request = await Geolocation.requestPermissions();
         if (request.location !== 'granted') {
-          console.error('❌ El usuario denegó el permiso del GPS.');
           setGpsError(true);
           return;
         }
       }
 
-      // 2. Empezar a escuchar la ubicación
-      console.log('✅ Permisos listos. Buscando satélites...');
       const watchId = await Geolocation.watchPosition({ enableHighAccuracy: true }, (position, err) => {
-        if (err) {
-          console.error('❌ Error crudo leyendo el GPS de Capacitor:', err);
-          setGpsError(true);
-          return;
-        }
-        
-        console.log('📍 GPS crudo capturado:', position);
-
-        // 3. Empaquetar y enviar por LiveKit
+        if (err) { setGpsError(true); return; }
         const payload = JSON.stringify({
           type: 'gps',
           latitude: position.coords.latitude,
@@ -49,52 +41,94 @@ const LiveView = ({ agentName, onDisconnect }) => {
           heading: position.coords.heading,
           timestamp: position.timestamp
         });
-        
-        // Enviar por el canal de datos
         const encoder = new TextEncoder();
         room.localParticipant.publishData(encoder.encode(payload), { reliable: true, topic: 'gps' });
-        console.log('📤 GPS enviado por LiveKit');
-        
       });
 
       return watchId;
-
     } catch (error) {
-      console.error('💥 Error fatal al intentar usar el plugin de Geolocation:', error);
+      console.error('💥 Error fatal GPS:', error);
       setGpsError(true);
     }
   };
 
   useEffect(() => {
     if (!room) return;
-
     let activeWatchId;
     const start = async () => {
       activeWatchId = await iniciarTransmisionGPS(room);
-      if (activeWatchId) {
-        setGpsActive(true);
-      }
+      if (activeWatchId) setGpsActive(true);
     };
     start();
-
     return () => {
-      if (activeWatchId) {
-        Geolocation.clearWatch({ id: activeWatchId });
-      }
+      if (activeWatchId) Geolocation.clearWatch({ id: activeWatchId });
     };
   }, [room]);
 
+  // ─── CÁMARA IP (canvas relay) ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!rtspUrl || !localParticipant) return;
+
+    const video = ipVideoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    const drawFrame = () => {
+      if (video.readyState >= 2) {
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      }
+      rafRef.current = requestAnimationFrame(drawFrame);
+    };
+
+    const startCanvasRelay = async () => {
+      try {
+        // Capturar el stream del canvas y publicarlo en LiveKit
+        const canvasStream = canvas.captureStream(25); // 25 fps
+        const videoTrack = canvasStream.getVideoTracks()[0];
+        const livekitTrack = new LocalVideoTrack(videoTrack, { name: 'ip-camera' });
+        await localParticipant.publishTrack(livekitTrack);
+        ipTrackRef.current = livekitTrack;
+        setIpCamActive(true);
+        rafRef.current = requestAnimationFrame(drawFrame);
+      } catch (e) {
+        console.error('Error publicando cámara IP:', e);
+        setIpCamError(true);
+      }
+    };
+
+    video.src = rtspUrl;
+    video.crossOrigin = 'anonymous';
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    video.oncanplay = () => startCanvasRelay();
+    video.onerror = () => {
+      console.error('No se pudo cargar el stream de la cámara IP:', rtspUrl);
+      setIpCamError(true);
+    };
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (ipTrackRef.current) {
+        localParticipant.unpublishTrack(ipTrackRef.current);
+        ipTrackRef.current = null;
+      }
+      video.src = '';
+      setIpCamActive(false);
+    };
+  }, [rtspUrl, localParticipant]);
+
+  // ─── Controles ───────────────────────────────────────────────────────────────
   const toggleMic = () => {
-    if (localParticipant) {
-      // TODO (Capacitor): Aquí añadiremos después la lógica nativa para cambiar rutas de audio (Bluetooth, Altavoz)
-      localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
-    }
+    if (localParticipant) localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
   };
 
   const toggleCamera = () => {
-    if (localParticipant) {
-      localParticipant.setCameraEnabled(!isCameraEnabled);
-    }
+    if (localParticipant) localParticipant.setCameraEnabled(!isCameraEnabled);
   };
 
   const handleHangUp = () => {
@@ -102,12 +136,21 @@ const LiveView = ({ agentName, onDisconnect }) => {
     onDisconnect();
   };
 
-  // Obtener el track de cámara para renderizarlo
+  // Track de cámara local estándar
   const cameraTrack = localParticipant?.videoTrackPublications?.values().next().value?.videoTrack;
 
   return (
     <div className="flex flex-col h-full bg-zinc-950">
       <RoomAudioRenderer />
+
+      {/* Elementos ocultos para el relay de cámara IP */}
+      {rtspUrl && (
+        <>
+          <video ref={ipVideoRef} style={{ display: 'none' }} />
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
+        </>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 bg-zinc-900 border-b border-zinc-800 z-10">
         <div className="flex flex-col">
@@ -115,6 +158,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
           <span className="font-bold text-lg text-zinc-100">{agentName}</span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Badge GPS */}
           {gpsActive && !gpsError && (
             <div className="flex items-center gap-1 bg-emerald-500/10 px-2 py-1.5 rounded-full border border-emerald-500/20">
               <Navigation className="w-3 h-3 text-emerald-500 animate-pulse" />
@@ -127,6 +171,20 @@ const LiveView = ({ agentName, onDisconnect }) => {
               <span className="text-[10px] font-bold text-amber-500 tracking-wider">GPS ERROR</span>
             </div>
           )}
+          {/* Badge Cámara IP */}
+          {rtspUrl && ipCamActive && !ipCamError && (
+            <div className="flex items-center gap-1 bg-sky-500/10 px-2 py-1.5 rounded-full border border-sky-500/20">
+              <Wifi className="w-3 h-3 text-sky-400 animate-pulse" />
+              <span className="text-[10px] font-bold text-sky-400 tracking-wider">CAM IP</span>
+            </div>
+          )}
+          {rtspUrl && ipCamError && (
+            <div className="flex items-center gap-1 bg-red-500/10 px-2 py-1.5 rounded-full border border-red-500/20">
+              <Wifi className="w-3 h-3 text-red-400 opacity-60" />
+              <span className="text-[10px] font-bold text-red-400 tracking-wider">IP ERROR</span>
+            </div>
+          )}
+          {/* Badge LIVE */}
           <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/20">
             <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
             <span className="text-xs font-bold text-red-500 tracking-wider">EN VIVO</span>
@@ -136,18 +194,30 @@ const LiveView = ({ agentName, onDisconnect }) => {
 
       {/* Main Video Area */}
       <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-        {cameraTrack && isCameraEnabled ? (
-          <VideoTrack 
-            trackRef={{ participant: localParticipant, source: 'camera', publication: Array.from(localParticipant.videoTrackPublications.values()).find(p => p.source === 'camera') }}
-            className="w-full h-full object-cover" 
-          />
+        {rtspUrl ? (
+          /* Modo Cámara IP: mostramos el canvas directamente al usuario */
+          ipCamError ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-700 m-4 rounded-3xl gap-3">
+              <Wifi className="w-16 h-16 mb-2 opacity-40" />
+              <p className="font-mono text-center text-sm">No se pudo conectar a la cámara IP</p>
+              <p className="text-xs text-zinc-600 text-center px-6">{rtspUrl}</p>
+            </div>
+          ) : (
+            <canvas ref={canvasRef} className="w-full h-full object-contain" style={{ display: ipCamActive ? 'block' : 'none' }} />
+          )
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-700 m-4 rounded-3xl">
-            <CameraOff className="w-16 h-16 mb-4 opacity-50" />
-            <p className="font-mono text-center">
-              Cámara pausada o no detectada
-            </p>
-          </div>
+          /* Modo Cámara Normal (USB/interna) */
+          cameraTrack && isCameraEnabled ? (
+            <VideoTrack
+              trackRef={{ participant: localParticipant, source: 'camera', publication: Array.from(localParticipant.videoTrackPublications.values()).find(p => p.source === 'camera') }}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-700 m-4 rounded-3xl">
+              <CameraOff className="w-16 h-16 mb-4 opacity-50" />
+              <p className="font-mono text-center">Cámara pausada o no detectada</p>
+            </div>
+          )
         )}
       </div>
 
@@ -155,36 +225,41 @@ const LiveView = ({ agentName, onDisconnect }) => {
       <div className="bg-zinc-900 p-6 pb-8 rounded-t-3xl border-t border-zinc-800 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
         <div className="flex justify-around items-center max-w-sm mx-auto">
           {/* Botón Micrófono */}
-          <button 
+          <button
             onClick={toggleMic}
             className={`w-16 h-16 flex items-center justify-center rounded-full transition-all ${
-              isMicrophoneEnabled 
-                ? 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700' 
+              isMicrophoneEnabled
+                ? 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
                 : 'bg-red-500/20 text-red-500 border border-red-500/30'
             }`}
           >
             {isMicrophoneEnabled ? <Mic className="w-7 h-7" /> : <MicOff className="w-7 h-7" />}
           </button>
 
-          {/* Botón Colgar (Gigante) */}
-          <button 
+          {/* Botón Colgar */}
+          <button
             onClick={handleHangUp}
             className="w-20 h-20 flex items-center justify-center rounded-full bg-red-600 text-white shadow-lg shadow-red-900/50 hover:bg-red-500 active:scale-90 transition-all"
           >
             <PhoneOff className="w-8 h-8" />
           </button>
 
-          {/* Botón Cámara */}
-          <button 
-            onClick={toggleCamera}
-            className={`w-16 h-16 flex items-center justify-center rounded-full transition-all ${
-              isCameraEnabled 
-                ? 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700' 
-                : 'bg-red-500/20 text-red-500 border border-red-500/30'
-            }`}
-          >
-            {isCameraEnabled ? <Camera className="w-7 h-7" /> : <CameraOff className="w-7 h-7" />}
-          </button>
+          {/* Botón Cámara (solo si NO es cámara IP) */}
+          {!rtspUrl ? (
+            <button
+              onClick={toggleCamera}
+              className={`w-16 h-16 flex items-center justify-center rounded-full transition-all ${
+                isCameraEnabled
+                  ? 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
+                  : 'bg-red-500/20 text-red-500 border border-red-500/30'
+              }`}
+            >
+              {isCameraEnabled ? <Camera className="w-7 h-7" /> : <CameraOff className="w-7 h-7" />}
+            </button>
+          ) : (
+            /* Espacio vacío para mantener la alineación */
+            <div className="w-16 h-16" />
+          )}
         </div>
       </div>
     </div>
