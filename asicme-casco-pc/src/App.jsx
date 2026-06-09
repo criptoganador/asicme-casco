@@ -51,7 +51,7 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
   });
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+    <div className="flex min-h-screen w-full flex-col bg-slate-50 text-slate-900 overflow-hidden font-sans">
       <TopHeader />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 
@@ -61,13 +61,13 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
         />
         <main className="flex-1 flex flex-col relative h-full">
         {/* Pestañas (Tabs) Nav */}
-        <div className="bg-zinc-900 border-b border-zinc-800 px-6 py-3 flex gap-4 z-30">
+        <div className="bg-white/90 border-b border-slate-200 px-6 py-3 flex gap-4 z-30">
           <button 
             onClick={() => setActiveTab('grid')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
               activeTab === 'grid' 
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' 
-                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                ? 'bg-sky-600 text-white shadow-lg shadow-sky-500/20' 
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             <LayoutGrid className="w-4 h-4" />
@@ -77,8 +77,8 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
             onClick={() => setActiveTab('map')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
               activeTab === 'map' 
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' 
-                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                ? 'bg-sky-600 text-white shadow-lg shadow-sky-500/20' 
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             <MapIcon className="w-4 h-4" />
@@ -128,10 +128,10 @@ function App() {
   };
 
   return (
-    <div className="w-full h-full bg-zinc-950">
+    <div className="min-h-screen w-full bg-slate-50">
       {token === '' ? (
-        <div className="flex h-screen items-center justify-center text-zinc-500 gap-4">
-           <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
+        <div className="flex h-screen items-center justify-center text-slate-500 gap-4">
+           <div className="w-12 h-12 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin"></div>
            <p>Conectando al servidor central...</p>
         </div>
       ) : (
