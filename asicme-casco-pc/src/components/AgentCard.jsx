@@ -246,6 +246,8 @@ const AgentCard = ({ participant, isExpanded }) => {
                   <Map
                     mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
                     maxZoom={24}
+                    scrollZoom={true}
+                    dragPan={true}
                     initialViewState={{
                       longitude: Number(displayCoords.longitude) || 0,
                       latitude: Number(displayCoords.latitude) || 0,
