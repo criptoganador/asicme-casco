@@ -252,7 +252,7 @@ const AgentCard = ({ participant, isExpanded }) => {
                       pitch: 60,
                       bearing: Number(displayCoords.heading) || 0
                     }}
-                    mapStyle="mapbox://styles/mapbox/dark-v11"
+                    mapStyle="mapbox://styles/mapbox/streets-v12"
                     style={{ width: '100%', height: '100%' }}
                     terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
                     onLoad={(e) => {
@@ -282,7 +282,7 @@ const AgentCard = ({ participant, isExpanded }) => {
                             'type': 'fill-extrusion',
                             'minzoom': 15,
                             'paint': {
-                              'fill-extrusion-color': '#334155',
+                              'fill-extrusion-color': '#e2e8f0',
                               'fill-extrusion-height': [
                                 'interpolate',
                                 ['linear'],
