@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin, Layers, PictureInPicture2, Map as MapIcon, LocateFixed } from 'lucide-react';
 import { useDataChannel, VideoTrack, AudioTrack } from '@livekit/components-react';
 import { MapContainer, TileLayer, Marker as LeafletMarker, Popup as LeafletPopup, useMap } from 'react-leaflet';

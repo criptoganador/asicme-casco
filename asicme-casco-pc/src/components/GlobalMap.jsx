@@ -51,6 +51,8 @@ const createCustomIcon = (isLive, hasLocation) => {
   });
 };
 
+let flyTriggerCount = 0;
+
 const GlobalMap = ({ agentLocations, selectedAgentId }) => {
   const [is3DMode, setIs3DMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -88,7 +90,8 @@ const GlobalMap = ({ agentLocations, selectedAgentId }) => {
     
     // Para Leaflet, disparamos el state (lo captura el Helper)
     if (!is3DMode) {
-      setFlyTarget({ lat, lng, triggerTime: Date.now() });
+      flyTriggerCount++;
+      setFlyTarget({ lat, lng, triggerTime: flyTriggerCount });
     } else {
       // Para Mapbox, usamos la referencia directa vía DOM hack (muy robusto para este caso)
       const map = document.getElementById('mapbox-global-map')?.__mapInstance;
