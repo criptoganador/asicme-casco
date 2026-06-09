@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Camera, CameraOff, PhoneOff, Navigation, Wifi } from 'lucide-react';
-import { useLocalParticipant, useRoomContext, RoomAudioRenderer, useTrackToggle } from '@livekit/components-react';
+import { Camera, PhoneOff, Navigation, Wifi } from 'lucide-react';
+import { useLocalParticipant, useRoomContext, RoomAudioRenderer } from '@livekit/components-react';
 import { Geolocation } from '@capacitor/geolocation';
-import { LocalVideoTrack, Track } from 'livekit-client';
+import { LocalVideoTrack } from 'livekit-client';
 
 const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
-  
-  // Hooks oficiales de LiveKit para controles de pista (Manejan hardware/Bluetooth mucho mejor)
-  const { toggle: toggleMic, enabled: isMicrophoneEnabled } = useTrackToggle({ source: Track.Source.Microphone });
-  const { toggle: toggleCamera, enabled: isCameraEnabled } = useTrackToggle({ source: Track.Source.Camera });
 
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsError, setGpsError] = useState(false);
@@ -226,19 +222,7 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
 
       {/* Footer / Controls */}
       <div className="bg-zinc-900 p-6 pb-8 rounded-t-3xl border-t border-zinc-800 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <div className="flex justify-around items-center max-w-sm mx-auto">
-          {/* Botón Micrófono */}
-          <button
-            onClick={toggleMic}
-            className={`w-16 h-16 flex items-center justify-center rounded-full transition-all ${
-              isMicrophoneEnabled
-                ? 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
-                : 'bg-red-500/20 text-red-500 border border-red-500/30'
-            }`}
-          >
-            {isMicrophoneEnabled ? <Mic className="w-7 h-7" /> : <MicOff className="w-7 h-7" />}
-          </button>
-
+        <div className="flex justify-center items-center max-w-sm mx-auto">
           {/* Botón Colgar */}
           <button
             onClick={handleHangUp}
@@ -246,23 +230,6 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
           >
             <PhoneOff className="w-8 h-8" />
           </button>
-
-          {/* Botón Cámara (solo si NO es cámara IP) */}
-          {!rtspUrl ? (
-            <button
-              onClick={toggleCamera}
-              className={`w-16 h-16 flex items-center justify-center rounded-full transition-all ${
-                isCameraEnabled
-                  ? 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
-                  : 'bg-red-500/20 text-red-500 border border-red-500/30'
-              }`}
-            >
-              {isCameraEnabled ? <Camera className="w-7 h-7" /> : <CameraOff className="w-7 h-7" />}
-            </button>
-          ) : (
-            /* Espacio vacío para mantener la alineación */
-            <div className="w-16 h-16" />
-          )}
         </div>
       </div>
     </div>
