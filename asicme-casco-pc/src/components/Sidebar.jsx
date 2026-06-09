@@ -1,4 +1,4 @@
-import { Users, Video, WifiOff } from 'lucide-react';
+import { Users, WifiOff } from 'lucide-react';
 import { useParticipants } from '@livekit/components-react';
 import MicrophoneSelector from './MicrophoneSelector';
 
@@ -13,16 +13,6 @@ const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
     <aside className="w-80 bg-transparent border-0 flex flex-col h-full z-20">
       <div className="m-4 flex-1 rounded-[2rem] bg-gradient-to-br from-sky-600 via-blue-600 to-indigo-700 p-[1px] shadow-2xl shadow-sky-900/25">
         <div className="flex h-full flex-col rounded-[1.75rem] bg-white shadow-sm">
-          <div className="p-6 border-b border-slate-200 bg-white/95">
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3 tracking-tight">
-              <div className="w-10 h-10 bg-sky-100 rounded-2xl flex items-center justify-center border border-sky-200 shadow-sm shadow-sky-200/40">
-                <Video className="w-5 h-5 text-sky-700" />
-              </div>
-              AsicMe Casco
-            </h1>
-            <p className="text-sky-700 text-sm mt-2 ml-12 font-mono uppercase tracking-[0.18em]">Centro de Mando PC</p>
-          </div>
-
           <div className="p-4">
         <button
           onClick={() => onSelectAgent(null)}

@@ -3,6 +3,7 @@ import { LiveKitRoom, useDataChannel, useLocalParticipant } from '@livekit/compo
 import { LayoutGrid, Map as MapIcon } from 'lucide-react';
 import '@livekit/components-styles';
 import Sidebar from './components/Sidebar';
+import TopHeader from './components/TopHeader';
 import AgentGrid from './components/AgentGrid';
 import GlobalMap from './components/GlobalMap';
 
@@ -50,13 +51,15 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
   });
 
   return (
-    <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
-      <Sidebar 
-        selectedAgentId={selectedAgentId} 
-        onSelectAgent={onSelectAgent}
-        agentLocations={agentLocations}
-      />
-      <main className="flex-1 flex flex-col relative h-full">
+    <div className="flex min-h-screen w-full flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+      <TopHeader />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar 
+          selectedAgentId={selectedAgentId} 
+          onSelectAgent={onSelectAgent}
+          agentLocations={agentLocations}
+        />
+        <main className="flex-1 flex flex-col relative h-full">
         {/* Pestañas (Tabs) Nav */}
         <div className="bg-zinc-900 border-b border-zinc-800 px-6 py-3 flex gap-4 z-30">
           <button 
@@ -92,6 +95,7 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
           )}
         </div>
       </main>
+      </div>
     </div>
   );
 }
