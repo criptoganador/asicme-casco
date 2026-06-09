@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Camera, CameraOff, PhoneOff, Navigation, Wifi } from 'lucide-react';
-import { useLocalParticipant, VideoTrack, useRoomContext, RoomAudioRenderer } from '@livekit/components-react';
+import { useLocalParticipant, useRoomContext, RoomAudioRenderer } from '@livekit/components-react';
 import { Geolocation } from '@capacitor/geolocation';
 import { LocalVideoTrack } from 'livekit-client';
 
@@ -145,8 +145,7 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
     onDisconnect();
   };
 
-  // Track de cámara local estándar
-  const cameraTrack = localParticipant?.videoTrackPublications?.values().next().value?.videoTrack;
+  // Track de cámara local manejado en segundo plano por LiveKitRoom
 
   return (
     <div className="flex flex-col h-full bg-zinc-950">
