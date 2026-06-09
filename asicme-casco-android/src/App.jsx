@@ -104,17 +104,21 @@ function App() {
         setToken(data.token);
         setAgentName(name);
 
-        // Activar modo segundo plano cuando iniciamos transmisión
-        try {
-          await BackgroundMode.enable({
-            title: 'Asicme Casco',
-            text: 'Transmitiendo al Centro de Mando',
-            hidden: false,
-            silent: true
-          });
-        } catch (e) {
-          console.error("No se pudo iniciar el modo segundo plano", e);
-        }
+        // Activar modo segundo plano con delay: esperar que LiveKit termine de iniciar
+        // antes de arrancar el Foreground Service para evitar el ANR de Android
+        setTimeout(async () => {
+          try {
+            await BackgroundMode.enable({
+              title: 'Asicme Casco',
+              text: 'Transmitiendo al Centro de Mando',
+              hidden: false,
+              silent: true,
+              disableWebViewOptimization: false
+            });
+          } catch (e) {
+            console.error("No se pudo iniciar el modo segundo plano", e);
+          }
+        }, 3000); // Esperar 3 segundos a que LiveKit y la cámara estén estables
 
       } else {
         throw new Error('El servidor no devolvió un token válido.');
