@@ -148,11 +148,20 @@ function App() {
           video={!rtspUrl} // Si es cámara IP, desactivamos la captura estándar
           audio={true}
           options={{
-            videoCaptureDefaults: cameraConfig || { facingMode: 'environment' },
+            videoCaptureDefaults: {
+              ...(cameraConfig || { facingMode: 'environment' }),
+              resolution: { width: 1280, height: 720 }, // Forzar 720p máximo
+              frameRate: { max: 20 } // Limitar a 20 FPS para reducir calentamiento
+            },
             audioCaptureDefaults: {
               noiseSuppression: true,
               echoCancellation: true,
               autoGainControl: true,
+            },
+            publishDefaults: {
+              videoSimulcast: false, // ¡Vital para móviles! Desactiva las 3 capas de codificación
+              videoCodec: 'vp8', // Usa codec con soporte de hardware común
+              videoBitrate: 800000 // Límite de 800 kbps
             }
           }}
           token={token}

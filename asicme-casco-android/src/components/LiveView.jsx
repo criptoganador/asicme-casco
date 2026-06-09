@@ -75,13 +75,22 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
 
     const ctx = canvas.getContext('2d');
 
-    const drawFrame = () => {
-      if (video.readyState >= 2) {
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
+    let lastDrawTime = 0;
+    const fpsInterval = 1000 / 20; // 20 FPS máximo para no quemar el CPU
+
+    const drawFrame = (timestamp) => {
       rafRef.current = requestAnimationFrame(drawFrame);
+      const elapsed = timestamp - lastDrawTime;
+
+      // Throttle: Solo dibuja si ha pasado el tiempo necesario (20 FPS)
+      if (elapsed > fpsInterval) {
+        lastDrawTime = timestamp - (elapsed % fpsInterval);
+        if (video.readyState >= 2) {
+          canvas.width = video.videoWidth || 1280;
+          canvas.height = video.videoHeight || 720;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
+      }
     };
 
     const startCanvasRelay = async () => {
@@ -192,32 +201,28 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
         </div>
       </div>
 
-      {/* Main Video Area */}
-      <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-        {rtspUrl ? (
-          /* Modo Cámara IP: mostramos el canvas directamente al usuario */
-          ipCamError ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-700 m-4 rounded-3xl gap-3">
-              <Wifi className="w-16 h-16 mb-2 opacity-40" />
-              <p className="font-mono text-center text-sm">No se pudo conectar a la cámara IP</p>
-              <p className="text-xs text-zinc-600 text-center px-6">{rtspUrl}</p>
-            </div>
-          ) : (
-            <canvas ref={canvasRef} className="w-full h-full object-contain" style={{ display: ipCamActive ? 'block' : 'none' }} />
-          )
-        ) : (
-          /* Modo Cámara Normal (USB/interna) */
-          cameraTrack && isCameraEnabled ? (
-            <VideoTrack
-              trackRef={{ participant: localParticipant, source: 'camera', publication: Array.from(localParticipant.videoTrackPublications.values()).find(p => p.source === 'camera') }}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-700 m-4 rounded-3xl">
-              <CameraOff className="w-16 h-16 mb-4 opacity-50" />
-              <p className="font-mono text-center">Cámara pausada o no detectada</p>
-            </div>
-          )
+      {/* Main Video Area (Headless Mode) */}
+      <div className="flex-1 relative bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
+        
+        {/* Radar/Indicador de Transmisión */}
+        <div className="relative flex items-center justify-center w-40 h-40">
+          <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full animate-[ping_3s_ease-in-out_infinite]"></div>
+          <div className="absolute inset-4 border-2 border-emerald-500/30 rounded-full animate-[ping_2s_ease-in-out_infinite_0.5s]"></div>
+          <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+            <Camera className="w-8 h-8 text-emerald-500" />
+          </div>
+        </div>
+
+        <div className="mt-8 text-center px-8">
+          <h2 className="text-xl font-bold text-zinc-200 mb-2">Transmisión Activa</h2>
+          <p className="text-zinc-500 text-sm">
+            La cámara está enviando datos al Centro de Mando en segundo plano para ahorrar batería.
+          </p>
+        </div>
+
+        {/* Mantenemos el canvas oculto para la cámara IP en el DOM pero sin render visual intensivo */}
+        {rtspUrl && (
+          <canvas ref={canvasRef} className="opacity-0 absolute pointer-events-none w-1 h-1" />
         )}
       </div>
 
