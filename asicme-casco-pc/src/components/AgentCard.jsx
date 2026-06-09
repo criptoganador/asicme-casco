@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Camera, MapPin, Volume2, VolumeX, Maximize2 } from 'lucide-react';
+import { Camera, MapPin, Volume2, VolumeX, Maximize2, Minimize2 } from 'lucide-react';
 import { VideoTrack, AudioTrack } from '@livekit/components-react';
 
 const AgentCard = ({ participant, isExpanded, location }) => {
   const [isMuted, setIsMuted] = useState(false);
+  const [localExpanded, setLocalExpanded] = useState(false);
+
+  const expanded = Boolean(isExpanded) || localExpanded;
 
   // Obtener los tracks de video y audio del participante real
   const videoTrackRef = Array.from(participant.videoTrackPublications.values()).find(p => p.source === 'camera');
@@ -11,7 +14,7 @@ const AgentCard = ({ participant, isExpanded, location }) => {
 
   return (
     <div className={`flex flex-col bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden shadow-xl transition-all ${
-      isExpanded ? 'w-full max-w-4xl aspect-video mx-auto' : 'h-[400px]'
+      expanded ? 'w-full max-w-4xl aspect-video mx-auto' : 'h-[400px]'
     }`}>
       
       {/* Encabezado de la tarjeta */}
@@ -43,9 +46,14 @@ const AgentCard = ({ participant, isExpanded, location }) => {
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
-          {!isExpanded && (
-            <button className="p-2 text-slate-700 hover:text-slate-900 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors">
+          {!expanded && (
+            <button onClick={() => setLocalExpanded(true)} className="p-2 text-slate-700 hover:text-slate-900 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors" title="Expandir">
               <Maximize2 className="w-4 h-4" />
+            </button>
+          )}
+          {expanded && localExpanded && (
+            <button onClick={() => setLocalExpanded(false)} className="p-2 text-slate-700 hover:text-slate-900 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors" title="Restaurar">
+              <Minimize2 className="w-4 h-4" />
             </button>
           )}
         </div>
