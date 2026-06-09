@@ -92,7 +92,7 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
           {activeTab === 'grid' ? (
             <AgentGrid selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
           ) : (
-            <GlobalMap agentLocations={agentLocations} />
+            <GlobalMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
           )}
         </div>
       </main>
