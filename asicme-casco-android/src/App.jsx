@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
+import { BackgroundMode } from '@anuradev/capacitor-background-mode';
 import LoginView from './components/LoginView';
 import LiveView from './components/LiveView';
 import SplashScreen from './components/SplashScreen';
@@ -102,6 +103,19 @@ function App() {
         setCameraConfig(bestCam);
         setToken(data.token);
         setAgentName(name);
+
+        // Activar modo segundo plano cuando iniciamos transmisión
+        try {
+          await BackgroundMode.enable({
+            title: 'Asicme Casco',
+            text: 'Transmitiendo al Centro de Mando',
+            hidden: false,
+            silent: true
+          });
+        } catch (e) {
+          console.error("No se pudo iniciar el modo segundo plano", e);
+        }
+
       } else {
         throw new Error('El servidor no devolvió un token válido.');
       }
@@ -118,9 +132,14 @@ function App() {
     }
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     setToken('');
     setAgentName('');
+    try {
+      await BackgroundMode.disable();
+    } catch (e) {
+      console.error("Error al desactivar el modo segundo plano", e);
+    }
   };
 
   return (
