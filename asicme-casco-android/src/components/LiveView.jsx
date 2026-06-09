@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, PhoneOff, Navigation, Wifi } from 'lucide-react';
-import { useLocalParticipant, useRoomContext, RoomAudioRenderer } from '@livekit/components-react';
+import { useLocalParticipant, useRoomContext, RoomAudioRenderer, useTrackToggle } from '@livekit/components-react';
 import { Geolocation } from '@capacitor/geolocation';
-import { LocalVideoTrack } from 'livekit-client';
+import { LocalVideoTrack, Track } from 'livekit-client';
 
 const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
+
+  // Mantenemos estos hooks internamente (aunque no haya botones) porque LiveKit los usa para 
+  // estabilizar y mantener vivas las conexiones con Bluetooth y el hardware del micrófono/cámara
+  useTrackToggle({ source: Track.Source.Microphone });
+  useTrackToggle({ source: Track.Source.Camera });
 
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsError, setGpsError] = useState(false);
