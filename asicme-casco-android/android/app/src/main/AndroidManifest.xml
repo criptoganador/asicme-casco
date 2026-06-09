@@ -34,13 +34,6 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- Declaración explícita del servicio de segundo plano con su tipo requerido por Android 14 -->
-        <service
-            android:name="ar.com.anura.plugins.backgroundmode.BackgroundModeService"
-            android:foregroundServiceType="camera|microphone|location"
-            android:exported="false"
-            android:stopWithTask="false" />
-
     </application>
 
     <!-- Permissions -->

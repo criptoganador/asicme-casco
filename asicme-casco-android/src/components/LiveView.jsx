@@ -24,6 +24,33 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   const ipTrackRef = useRef(null);
   const rafRef = useRef(null);
 
+  // ─── Keep-alive en segundo plano ─────────────────────────────────────────────
+  // Un AudioContext silencioso indica al sistema Android que la app está activa
+  // y evita que congele el WebView. Truco usado por Spotify, Meet y WhatsApp.
+  useEffect(() => {
+    let audioCtx = null;
+    let oscillator = null;
+
+    try {
+      audioCtx = new AudioContext();
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.value = 0.00001; // Casi silencioso (0 exacto permite optimizaciones que lo apagan)
+      oscillator = audioCtx.createOscillator();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+      console.log('✅ Keep-alive de audio activo');
+    } catch (e) {
+      console.warn('Keep-alive de audio no disponible:', e);
+    }
+
+    return () => {
+      try { oscillator?.stop(); } catch { /* ignorar */ }
+      try { audioCtx?.close(); } catch { /* ignorar */ }
+    };
+  }, []);
+
+
   // La cámara y el micro se inicializan automáticamente por <LiveKitRoom video={true} audio={true}>
 
   // ─── GPS ────────────────────────────────────────────────────────────────────

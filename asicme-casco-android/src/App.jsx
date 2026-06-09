@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { BackgroundMode } from '@anuradev/capacitor-background-mode';
 import LoginView from './components/LoginView';
 import LiveView from './components/LiveView';
 import SplashScreen from './components/SplashScreen';
@@ -104,21 +103,7 @@ function App() {
         setToken(data.token);
         setAgentName(name);
 
-        // Activar modo segundo plano con delay: esperar que LiveKit termine de iniciar
-        // antes de arrancar el Foreground Service para evitar el ANR de Android
-        setTimeout(async () => {
-          try {
-            await BackgroundMode.enable({
-              title: 'Asicme Casco',
-              text: 'Transmitiendo al Centro de Mando',
-              hidden: false,
-              silent: true,
-              disableWebViewOptimization: false
-            });
-          } catch (e) {
-            console.error("No se pudo iniciar el modo segundo plano", e);
-          }
-        }, 3000); // Esperar 3 segundos a que LiveKit y la cámara estén estables
+        // El keep-alive de segundo plano se maneja via AudioContext en LiveView
 
       } else {
         throw new Error('El servidor no devolvió un token válido.');
@@ -136,14 +121,9 @@ function App() {
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     setToken('');
     setAgentName('');
-    try {
-      await BackgroundMode.disable();
-    } catch (e) {
-      console.error("Error al desactivar el modo segundo plano", e);
-    }
   };
 
   return (
