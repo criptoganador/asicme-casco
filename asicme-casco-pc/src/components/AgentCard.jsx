@@ -246,11 +246,11 @@ const AgentCard = ({ participant, isExpanded }) => {
                   <Map
                     mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
                     initialViewState={{
-                      longitude: displayCoords.longitude,
-                      latitude: displayCoords.latitude,
+                      longitude: Number(displayCoords.longitude) || 0,
+                      latitude: Number(displayCoords.latitude) || 0,
                       zoom: 16.5,
                       pitch: 60,
-                      bearing: displayCoords.heading || 0
+                      bearing: Number(displayCoords.heading) || 0
                     }}
                     mapStyle="mapbox://styles/mapbox/dark-v11"
                     style={{ width: '100%', height: '100%' }}
