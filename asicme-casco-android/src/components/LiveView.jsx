@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Camera, CameraOff, PhoneOff, Navigation, Wifi } from 'lucide-react';
-import { useLocalParticipant, useRoomContext, RoomAudioRenderer } from '@livekit/components-react';
+import { useLocalParticipant, useRoomContext, RoomAudioRenderer, useTrackToggle } from '@livekit/components-react';
 import { Geolocation } from '@capacitor/geolocation';
-import { LocalVideoTrack } from 'livekit-client';
+import { LocalVideoTrack, Track } from 'livekit-client';
 
 const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   const room = useRoomContext();
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+  const { localParticipant } = useLocalParticipant();
+  
+  // Hooks oficiales de LiveKit para controles de pista (Manejan hardware/Bluetooth mucho mejor)
+  const { toggle: toggleMic, enabled: isMicrophoneEnabled } = useTrackToggle({ source: Track.Source.Microphone });
+  const { toggle: toggleCamera, enabled: isCameraEnabled } = useTrackToggle({ source: Track.Source.Camera });
+
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsError, setGpsError] = useState(false);
   const [ipCamError, setIpCamError] = useState(false);
@@ -132,13 +137,7 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   }, [rtspUrl, localParticipant]);
 
   // ─── Controles ───────────────────────────────────────────────────────────────
-  const toggleMic = () => {
-    if (localParticipant) localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
-  };
-
-  const toggleCamera = () => {
-    if (localParticipant) localParticipant.setCameraEnabled(!isCameraEnabled);
-  };
+  // toggleMic y toggleCamera ahora son manejados automáticamente por useTrackToggle
 
   const handleHangUp = () => {
     room.disconnect();
