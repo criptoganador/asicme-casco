@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin, Layers, PictureInPicture2, Map as MapIcon } from 'lucide-react';
+import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin, Layers, PictureInPicture2, Map as MapIcon, LocateFixed } from 'lucide-react';
 import { useDataChannel, VideoTrack, AudioTrack } from '@livekit/components-react';
 import { MapContainer, TileLayer, Marker as LeafletMarker, Popup as LeafletPopup, useMap } from 'react-leaflet';
 import mapboxgl from 'mapbox-gl';
@@ -19,16 +19,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Componente para re-centrar el mapa cuando cambian las coordenadas
-function MapUpdater({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center && center.length === 2 && !isNaN(center[0]) && !isNaN(center[1])) {
-      map.setView(center, map.getZoom(), { animate: true });
-    }
-  }, [center, map]);
-  return null;
-}
+// Ya no usamos MapUpdater forzado para permitir al usuario explorar el mapa libremente.
+// La cámara se centrará con el botón "Recenter" o en la carga inicial.
 
 // Generador de Icono Táctico Animado (Sonar + Cono de Dirección)
 const getTacticalMarker = (heading) => {
@@ -44,8 +36,9 @@ const getTacticalMarker = (heading) => {
 };
 
 // Sub-componente del mapa táctico para reutilizarlo en la tarjeta y en PiP
-const TacticalMap = ({ displayCoords, is3DMode, setIs3DMode }) => (
-  <div className="w-full h-full relative">
+const TacticalMap = ({ displayCoords, is3DMode, setIs3DMode }) => {
+  return (
+  <div className="w-full h-full relative group/map">
     {!is3DMode ? (
       <MapContainer
         center={[displayCoords.latitude, displayCoords.longitude]}
@@ -70,10 +63,12 @@ const TacticalMap = ({ displayCoords, is3DMode, setIs3DMode }) => (
             </div>
           </LeafletPopup>
         </LeafletMarker>
-        <MapUpdater center={[displayCoords.latitude, displayCoords.longitude]} />
+        {/* Helper interno para poder volar al centro usando el hook */}
+        <RecenterHelper center={[displayCoords.latitude, displayCoords.longitude]} />
       </MapContainer>
     ) : (
       <Map
+        id="mapbox-agent-map"
         mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
         maxZoom={24}
         scrollZoom={true}
@@ -90,6 +85,9 @@ const TacticalMap = ({ displayCoords, is3DMode, setIs3DMode }) => (
         terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
         onLoad={(e) => {
           const map = e.target;
+          // Guardamos referencia al mapa en el elemento DOM para acceder desde fuera
+          document.getElementById('mapbox-agent-map').__mapInstance = map;
+          
           if (!map.getSource('mapbox-dem')) {
             map.addSource('mapbox-dem', { type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize: 512, maxzoom: 14 });
             map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
@@ -138,18 +136,56 @@ const TacticalMap = ({ displayCoords, is3DMode, setIs3DMode }) => (
       </div>
     </div>
 
-    {/* Botón 3D/2D toggle */}
-    <button
-      onClick={() => setIs3DMode(!is3DMode)}
-      className={`absolute top-2 right-2 z-[400] p-1.5 rounded-lg backdrop-blur-md border shadow-lg transition-colors flex items-center gap-1.5 ${
-        is3DMode ? 'bg-sky-500 text-white border-sky-400' : 'bg-slate-900/80 text-slate-300 border-slate-700/50 hover:bg-slate-800'
-      }`}
-    >
-      <Layers className="w-3.5 h-3.5" />
-      <span className="text-[10px] font-bold font-mono">{is3DMode ? '3D' : '2D'}</span>
-    </button>
+    {/* Botones Flotantes (Derecha) */}
+    <div className="absolute top-2 right-2 z-[400] flex flex-col gap-2">
+      {/* Botón 3D/2D toggle */}
+      <button
+        onClick={() => setIs3DMode(!is3DMode)}
+        className={`p-1.5 rounded-lg backdrop-blur-md border shadow-lg transition-colors flex items-center gap-1.5 ${
+          is3DMode ? 'bg-sky-500 text-white border-sky-400' : 'bg-slate-900/80 text-slate-300 border-slate-700/50 hover:bg-slate-800'
+        }`}
+        title="Cambiar vista 2D/3D"
+      >
+        <Layers className="w-3.5 h-3.5" />
+        <span className="text-[10px] font-bold font-mono">{is3DMode ? '3D' : '2D'}</span>
+      </button>
+
+      {/* Botón Centrar Agente (Solo Mapbox usa el hack, Leaflet lo hace interno) */}
+      {is3DMode && (
+        <button
+          onClick={() => {
+            const map = document.getElementById('mapbox-agent-map')?.__mapInstance;
+            if (map) {
+              map.flyTo({ center: [displayCoords.longitude, displayCoords.latitude], zoom: 16.5, duration: 1500 });
+            }
+          }}
+          className="p-1.5 rounded-lg bg-slate-900/80 text-white border border-slate-700/50 hover:bg-sky-500 hover:border-sky-400 shadow-lg transition-colors flex items-center justify-center opacity-0 group-hover/map:opacity-100"
+          title="Centrar en el Agente"
+        >
+          <LocateFixed className="w-4 h-4" />
+        </button>
+      )}
+    </div>
   </div>
-);
+)};
+
+// Componente helper para recentrar en Leaflet
+function RecenterHelper({ center }) {
+  const map = useMap();
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        map.flyTo(center, 16, { animate: true, duration: 1.5 });
+      }}
+      className="absolute top-12 right-2 z-[400] p-1.5 rounded-lg bg-slate-900/80 text-white border border-slate-700/50 hover:bg-sky-500 hover:border-sky-400 shadow-lg transition-colors flex items-center justify-center opacity-0 group-hover/map:opacity-100"
+      title="Centrar en el Agente"
+      style={{ pointerEvents: 'auto' }}
+    >
+      <LocateFixed className="w-4 h-4" />
+    </button>
+  );
+}
 
 
 const AgentCard = ({ participant, isExpanded }) => {

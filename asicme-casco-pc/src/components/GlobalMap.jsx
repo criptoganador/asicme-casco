@@ -1,15 +1,31 @@
 import { useState } from 'react';
 import { useParticipants } from '@livekit/components-react';
-import { MapContainer, TileLayer, Marker as LeafletMarker, Popup as LeafletPopup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker as LeafletMarker, Popup as LeafletPopup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import mapboxgl from 'mapbox-gl';
 import Map, { Marker as MapboxMarker, NavigationControl, FullscreenControl } from 'react-map-gl/mapbox';
-import { Layers } from 'lucide-react';
+import { Layers, ChevronDown, LocateFixed, Users, Crosshair } from 'lucide-react';
 
 // Fix para el error "import.meta outside a module" de Vite con Mapbox GL v3
 import MapboxWorker from 'mapbox-gl/dist/mapbox-gl-csp-worker?worker';
 mapboxgl.workerClass = MapboxWorker;
+
+// Componente helper para recentrar en Leaflet sin usar ref en MapContainer
+function LeafletFlyToHelper({ flyTarget }) {
+  const map = useMap();
+  
+  if (flyTarget && flyTarget.triggerTime) {
+    // Usamos el triggerTime para asegurarnos de que vuela incluso si hace clic en el mismo agente de nuevo
+    setTimeout(() => {
+      map.flyTo([flyTarget.lat, flyTarget.lng], 17, {
+        animate: true,
+        duration: 1.5
+      });
+    }, 50);
+  }
+  return null;
+}
 
 // Función para crear un marcador HTML personalizado 2D
 const createCustomIcon = (isLive, hasLocation) => {
@@ -37,6 +53,9 @@ const createCustomIcon = (isLive, hasLocation) => {
 
 const GlobalMap = ({ agentLocations, selectedAgentId }) => {
   const [is3DMode, setIs3DMode] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [flyTarget, setFlyTarget] = useState(null); // { lat, lng, triggerTime }
+  
   const participants = useParticipants();
   
   // Filtramos al Operador (CommandCenter)
@@ -63,17 +82,71 @@ const GlobalMap = ({ agentLocations, selectedAgentId }) => {
     : `SISTEMA ACTIVO • ${agents.length} AGENTES MONITOREADOS`;
   const hasLocation = validLocations.length > 0;
 
+  // Función para manejar el "Volver a centrar" en un agente específico
+  const handleFlyToAgent = (lat, lng) => {
+    setDropdownOpen(false);
+    
+    // Para Leaflet, disparamos el state (lo captura el Helper)
+    if (!is3DMode) {
+      setFlyTarget({ lat, lng, triggerTime: Date.now() });
+    } else {
+      // Para Mapbox, usamos la referencia directa vía DOM hack (muy robusto para este caso)
+      const map = document.getElementById('mapbox-global-map')?.__mapInstance;
+      if (map) {
+        map.flyTo({ center: [lng, lat], zoom: 17, duration: 2000, essential: true });
+      }
+    }
+  };
+
   return (
-    <div className="flex-1 relative w-full h-full bg-white overflow-hidden">
+    <div className="flex-1 relative w-full h-full bg-white overflow-hidden group/globalmap">
       
       {/* HUD Superior */}
       <div className="absolute top-6 left-6 z-[1000] flex flex-col gap-2 pointer-events-none">
-        <h2 className="text-2xl font-bold text-slate-900 tracking-wider drop-shadow-sm">
+        <h2 className="text-2xl font-bold text-slate-900 tracking-wider drop-shadow-sm flex items-center gap-3">
+          <Crosshair className="w-6 h-6 text-emerald-600" />
           {title}
         </h2>
         <div className="text-sm font-mono text-emerald-600 animate-pulse drop-shadow-sm bg-white/70 backdrop-blur-md px-3 py-1.5 rounded-lg w-fit border border-emerald-200">
           {subtitle}
         </div>
+
+        {/* Panel lateral: Selector de Agentes */}
+        {!selectedAgentId && hasLocation && (
+          <div className="mt-2 pointer-events-auto relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 bg-slate-900/90 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg hover:bg-slate-800 transition-colors border border-slate-700/50 backdrop-blur-md"
+            >
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span>Centrar cámara en...</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {dropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden py-2 animate-in slide-in-from-top-2">
+                <div className="px-3 pb-2 mb-2 border-b border-slate-800 text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+                  Escuadrón Activo
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {validLocations.map(({ agent, loc }) => (
+                    <button
+                      key={agent.identity}
+                      onClick={() => handleFlyToAgent(loc.lat, loc.lng)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-slate-800 transition-colors flex items-center justify-between group/btn"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-sm text-slate-200 font-semibold">{agent.name || agent.identity}</span>
+                      </div>
+                      <LocateFixed className="w-4 h-4 text-slate-500 group-hover/btn:text-emerald-400 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Botón de alternancia 2D / 3D */}
@@ -107,6 +180,8 @@ const GlobalMap = ({ agentLocations, selectedAgentId }) => {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
+          <LeafletFlyToHelper flyTarget={flyTarget} />
+
           {validLocations.map(({ agent, loc }) => {
             const isLive = true;
             const icon = createCustomIcon(isLive, true);
@@ -137,6 +212,7 @@ const GlobalMap = ({ agentLocations, selectedAgentId }) => {
         </MapContainer>
       ) : (
         <Map
+          id="mapbox-global-map"
           mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
           maxZoom={24}
           scrollZoom={true}
@@ -153,6 +229,9 @@ const GlobalMap = ({ agentLocations, selectedAgentId }) => {
           terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
           onLoad={(e) => {
             const map = e.target;
+            // Guardamos referencia al mapa en el elemento DOM para acceder desde fuera
+            document.getElementById('mapbox-global-map').__mapInstance = map;
+            
             // Añadir capa de elevación 3D
             if (!map.getSource('mapbox-dem')) {
               map.addSource('mapbox-dem', {
