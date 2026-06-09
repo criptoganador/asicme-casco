@@ -21,9 +21,11 @@
     "leaflet": "^1.9.4",
     "livekit-client": "^2.19.1",
     "lucide-react": "^1.17.0",
+    "mapbox-gl": "^3.24.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "react-map-gl": "^8.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

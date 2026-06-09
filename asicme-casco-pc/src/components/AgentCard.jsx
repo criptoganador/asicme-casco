@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin } from 'lucide-react';
+import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin, Layers } from 'lucide-react';
 import { useDataChannel, VideoTrack, AudioTrack } from '@livekit/components-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker as LeafletMarker, Popup as LeafletPopup, useMap } from 'react-leaflet';
+import Map, { Marker as MapboxMarker } from 'react-map-gl/mapbox';
 import L from 'leaflet';
 
 // Fix para los iconos de Leaflet en React
@@ -57,6 +58,7 @@ const AgentCard = ({ participant, isExpanded }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [localExpanded, setLocalExpanded] = useState(false);
   const [agentCoords, setAgentCoords] = useState(null);
+  const [is3DMode, setIs3DMode] = useState(false); // Estado para Mapbox 3D
 
   const expanded = Boolean(isExpanded) || localExpanded;
 
@@ -207,44 +209,143 @@ const AgentCard = ({ participant, isExpanded }) => {
         <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden relative" style={{ height: expanded ? '200px' : '140px' }}>
           {displayCoords ? (
             <>
-              <MapContainer 
-                center={[displayCoords.latitude, displayCoords.longitude]} 
-                zoom={16} 
-                style={{ height: '100%', width: '100%' }}
-                zoomControl={false}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                />
-                <Marker 
-                  position={[displayCoords.latitude, displayCoords.longitude]}
-                  icon={getTacticalMarker(displayCoords.heading)}
-                >
-                  <Popup className="tactical-popup">
-                    <div className="text-center font-mono text-xs">
-                      <b>{participant.name || participant.identity}</b><br/>
-                      Lat: {displayCoords.latitude.toFixed(5)}<br/>
-                      Lng: {displayCoords.longitude.toFixed(5)}<br/>
-                      {displayCoords.heading !== null && displayCoords.heading !== undefined ? `Dirección: ${displayCoords.heading}°` : ''}
-                    </div>
-                  </Popup>
-                </Marker>
-                <MapUpdater center={[displayCoords.latitude, displayCoords.longitude]} />
-              </MapContainer>
-              {/* Overlay de telemetría */}
-              <div className="absolute top-2 left-2 z-[400] bg-slate-900/80 backdrop-blur-md rounded-lg p-2 border border-slate-700/50 shadow-lg pointer-events-none">
-                <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs">
-                  <span className="flex h-1.5 w-1.5 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                  </span>
-                  GPS ACTIVO
-                </div>
-                <div className="text-[10px] text-slate-300 mt-1">
-                  Actualizado: {new Date(displayCoords.timestamp).toLocaleTimeString()}
+                {!is3DMode ? (
+                  <MapContainer 
+                    center={[displayCoords.latitude, displayCoords.longitude]} 
+                    zoom={16} 
+                    style={{ height: '100%', width: '100%', zIndex: 1 }}
+                    zoomControl={false}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                      url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    />
+                    <LeafletMarker 
+                      position={[displayCoords.latitude, displayCoords.longitude]}
+                      icon={getTacticalMarker(displayCoords.heading)}
+                    >
+                      <LeafletPopup className="tactical-popup">
+                        <div className="text-center font-mono text-xs">
+                          <b>{participant.name || participant.identity}</b><br/>
+                          Lat: {displayCoords.latitude.toFixed(5)}<br/>
+                          Lng: {displayCoords.longitude.toFixed(5)}<br/>
+                          {displayCoords.heading !== null && displayCoords.heading !== undefined ? `Dirección: ${displayCoords.heading}°` : ''}
+                        </div>
+                      </LeafletPopup>
+                    </LeafletMarker>
+                    <MapUpdater center={[displayCoords.latitude, displayCoords.longitude]} />
+                  </MapContainer>
+                ) : (
+                  <Map
+                    mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
+                    initialViewState={{
+                      longitude: displayCoords.longitude,
+                      latitude: displayCoords.latitude,
+                      zoom: 16.5,
+                      pitch: 60,
+                      bearing: displayCoords.heading || 0
+                    }}
+                    mapStyle="mapbox://styles/mapbox/dark-v11"
+                    style={{ width: '100%', height: '100%' }}
+                    terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
+                    onLoad={(e) => {
+                      const map = e.target;
+                      // Añadir capa de elevación 3D
+                      map.addSource('mapbox-dem', {
+                        'type': 'raster-dem',
+                        'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+                        'tileSize': 512,
+                        'maxzoom': 14
+                      });
+                      map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
+
+                      // Añadir capa de edificios 3D
+                      if (!map.getLayer('3d-buildings')) {
+                        const layers = map.getStyle().layers;
+                        const labelLayerId = layers.find(
+                          (layer) => layer.type === 'symbol' && layer.layout['text-field']
+                        )?.id;
+
+                        map.addLayer(
+                          {
+                            'id': '3d-buildings',
+                            'source': 'composite',
+                            'source-layer': 'building',
+                            'filter': ['==', 'extrude', 'true'],
+                            'type': 'fill-extrusion',
+                            'minzoom': 15,
+                            'paint': {
+                              'fill-extrusion-color': '#334155',
+                              'fill-extrusion-height': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                15,
+                                0,
+                                15.05,
+                                ['get', 'height']
+                              ],
+                              'fill-extrusion-base': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                15,
+                                0,
+                                15.05,
+                                ['get', 'min_height']
+                              ],
+                              'fill-extrusion-opacity': 0.8
+                            }
+                          },
+                          labelLayerId
+                        );
+                      }
+                    }}
+                  >
+                    <MapboxMarker 
+                      longitude={displayCoords.longitude} 
+                      latitude={displayCoords.latitude}
+                      anchor="center"
+                    >
+                       <div style={{ transform: `rotate(${displayCoords.heading || 0}deg)` }} className="relative flex items-center justify-center w-16 h-16">
+                          {displayCoords.heading !== null && displayCoords.heading !== undefined && (
+                            <div className="absolute w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-b-[40px] border-b-emerald-500/40 blur-[1px] -top-3"></div>
+                          )}
+                          <span className="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-slate-900 shadow-[0_0_10px_rgba(52,211,153,1)] z-10"></span>
+                        </div>
+                    </MapboxMarker>
+                  </Map>
+                )}
+              {/* Overlay de telemetría y controles */}
+              <div className="absolute top-2 left-2 z-[400] flex flex-col gap-2 pointer-events-none">
+                <div className="bg-slate-900/80 backdrop-blur-md rounded-lg p-2 border border-slate-700/50 shadow-lg">
+                  <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs">
+                    <span className="flex h-1.5 w-1.5 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                    </span>
+                    GPS ACTIVO
+                  </div>
+                  <div className="text-[10px] text-slate-300 mt-1">
+                    Actualizado: {new Date(displayCoords.timestamp).toLocaleTimeString()}
+                  </div>
                 </div>
               </div>
+              
+              {/* Botón de control 3D */}
+              <button 
+                onClick={() => setIs3DMode(!is3DMode)}
+                className={`absolute top-2 right-2 z-[400] p-2 rounded-lg backdrop-blur-md border shadow-lg transition-colors flex items-center gap-2 ${
+                  is3DMode 
+                    ? 'bg-sky-500 text-white border-sky-400' 
+                    : 'bg-slate-900/80 text-slate-300 border-slate-700/50 hover:bg-slate-800'
+                }`}
+                title={is3DMode ? "Volver a 2D (Rápido)" : "Activar 3D (Mapbox)"}
+              >
+                <Layers className="w-4 h-4" />
+                <span className="text-xs font-bold font-mono">{is3DMode ? '3D' : '2D'}</span>
+              </button>
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-emerald-400/60 font-mono text-sm bg-slate-900">
