@@ -11,7 +11,7 @@ const AgentCard = ({ participant, isExpanded, location }) => {
 
   return (
     <div className={`flex flex-col bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden shadow-xl transition-all ${
-      isExpanded ? 'w-full max-w-5xl aspect-video' : 'h-[400px]'
+      isExpanded ? 'w-full max-w-4xl aspect-video mx-auto' : 'h-[400px]'
     }`}>
       
       {/* Encabezado de la tarjeta */}
@@ -56,7 +56,7 @@ const AgentCard = ({ participant, isExpanded, location }) => {
         {videoTrackRef ? (
           <VideoTrack
             trackRef={{ participant, source: 'camera', publication: videoTrackRef }}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-700">
