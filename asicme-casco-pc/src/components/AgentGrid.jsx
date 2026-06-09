@@ -31,7 +31,8 @@ const AgentGrid = ({ selectedAgentId, agentLocations }) => {
     );
   }
 
-  if (selectedAgentId && displayedAgents.length === 1) {
+  if (displayedAgents.length === 1) {
+    const singleAgentId = displayedAgents[0].identity;
     return (
       <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-slate-50/10">
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -39,7 +40,7 @@ const AgentGrid = ({ selectedAgentId, agentLocations }) => {
             key={displayedAgents[0].identity}
             participant={displayedAgents[0]}
             isExpanded={true}
-            location={agentLocations && agentLocations[displayedAgents[0].identity] ? agentLocations[displayedAgents[0].identity] : null}
+            location={agentLocations && agentLocations[singleAgentId] ? agentLocations[singleAgentId] : null}
           />
 
           <div className="flex flex-col gap-4">
@@ -51,7 +52,7 @@ const AgentGrid = ({ selectedAgentId, agentLocations }) => {
                 </p>
               </div>
               <div className="h-[480px] w-full">
-                <GlobalMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
+                <GlobalMap selectedAgentId={singleAgentId} agentLocations={agentLocations} />
               </div>
             </div>
           </div>
