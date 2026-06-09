@@ -213,7 +213,7 @@ const AgentCard = ({ participant, isExpanded }) => {
 
       {/* Pie de tarjeta - Mini-Mapa GPS */}
       <div className="p-4 bg-slate-950 border-t border-slate-800">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden relative" style={{ height: expanded ? '200px' : '140px' }}>
+        <div className="rounded-2xl border border-slate-300 bg-white overflow-hidden relative" style={{ height: expanded ? '200px' : '140px' }}>
           {displayCoords ? (
             <>
                 {!is3DMode ? (
@@ -355,7 +355,7 @@ const AgentCard = ({ participant, isExpanded }) => {
               </button>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-emerald-400/60 font-mono text-sm bg-slate-900">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 font-mono text-sm bg-slate-100">
               <MapPin className="w-8 h-8 mb-2 opacity-50 animate-bounce" />
               Esperando señal GPS...
             </div>
