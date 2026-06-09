@@ -56,15 +56,9 @@ const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
         {agents.length === 0 ? (
-          <div className="flex h-52 flex-col items-center justify-center rounded-[2rem] border border-sky-200/50 bg-white/90 p-6 text-center shadow-xl shadow-sky-900/10">
+          <div className="flex h-52 flex-col items-center justify-center rounded-[2.5rem] border border-sky-200/50 bg-white/90 p-6 text-center shadow-xl shadow-sky-900/10">
             <WifiOff className="w-12 h-12 mb-3 text-sky-700/90" />
             <p className="text-lg font-semibold text-slate-900">Sin transmisiones activas</p>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Los agentes aparecerán aquí cuando estén conectados y transmitiendo en vivo.
-            </p>
-            <p className="mt-4 text-xs uppercase tracking-[0.2em] text-sky-700">
-              Comprueba la conexión de LiveKit
-            </p>
           </div>
         ) : (
           agents.map((agent) => (
