@@ -25,6 +25,34 @@ function MapUpdater({ center }) {
   return null;
 }
 
+// Generador de Icono Táctico Animado (Sonar + Cono de Dirección)
+const getTacticalMarker = (heading) => {
+  const hasHeading = heading !== null && heading !== undefined;
+  
+  const html = `
+    <div style="transform: rotate(${heading || 0}deg);" class="relative flex items-center justify-center w-16 h-16 -ml-8 -mt-8">
+      ${hasHeading ? `
+        <!-- Cono de Visión -->
+        <div class="absolute w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-b-[40px] border-b-emerald-500/40 blur-[1px] -top-3"></div>
+      ` : ''}
+      
+      <!-- Efecto Sonar (Pulso expansivo) -->
+      <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-emerald-400 opacity-75"></span>
+      
+      <!-- Punto central brillante -->
+      <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-slate-900 shadow-[0_0_10px_rgba(52,211,153,1)] z-10"></span>
+    </div>
+  `;
+
+  return L.divIcon({
+    className: '', // Limpiar clases por defecto de Leaflet
+    html: html,
+    iconSize: [0, 0], // El tamaño lo maneja el div interno
+    iconAnchor: [0, 0] // Centrado relativo al div
+  });
+};
+
+
 const AgentCard = ({ participant, isExpanded }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [localExpanded, setLocalExpanded] = useState(false);
@@ -186,11 +214,14 @@ const AgentCard = ({ participant, isExpanded }) => {
                 zoomControl={false}
               >
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 />
-                <Marker position={[displayCoords.latitude, displayCoords.longitude]}>
-                  <Popup>
+                <Marker 
+                  position={[displayCoords.latitude, displayCoords.longitude]}
+                  icon={getTacticalMarker(displayCoords.heading)}
+                >
+                  <Popup className="tactical-popup">
                     <div className="text-center font-mono text-xs">
                       <b>{participant.name || participant.identity}</b><br/>
                       Lat: {displayCoords.latitude.toFixed(5)}<br/>
