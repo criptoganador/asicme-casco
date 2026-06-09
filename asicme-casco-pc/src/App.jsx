@@ -40,10 +40,18 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
     try {
       const payload = JSON.parse(new TextDecoder().decode(msg.payload));
       console.log('[LiveKit] DataChannel recibido:', msg.from?.identity, payload);
+      // store last GPS globally for quick UI fallback
+      if (payload && (payload.latitude !== undefined || payload.lat !== undefined)) {
+        window.__LAST_GPS__ = {
+          from: msg.from?.identity || msg.participant?.identity || null,
+          payload
+        };
+      }
+
       if (payload.type === 'gps' && msg.from) {
         setAgentLocations(prev => ({
           ...prev,
-          [msg.from.identity]: { lat: payload.lat, lng: payload.lng }
+          [msg.from.identity]: { lat: payload.lat || payload.latitude, lng: payload.lng || payload.longitude }
         }));
       }
     } catch (e) {

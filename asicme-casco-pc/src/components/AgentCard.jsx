@@ -52,6 +52,27 @@ const AgentCard = ({ participant, isExpanded }) => {
   const videoTrackRef = Array.from(participant.videoTrackPublications.values()).find(p => p.source === 'camera');
   const audioTrackRef = Array.from(participant.audioTrackPublications.values()).find(p => p.source === 'microphone');
 
+  // Fallback: si no llega agentCoords local, usar el último GPS global si coincide con identidad
+  const fallbackGps = typeof window !== 'undefined' ? window.__LAST_GPS__ : null;
+  let displayCoords = agentCoords;
+  if (!displayCoords && fallbackGps && fallbackGps.payload) {
+    const fallbackFrom = String(fallbackGps.from || '').trim().toLowerCase();
+    const cardName = String(participant.identity || participant.name || '').trim().toLowerCase();
+    if (fallbackFrom && cardName && (fallbackFrom === cardName || fallbackFrom.includes(cardName) || cardName.includes(fallbackFrom))) {
+      const p = fallbackGps.payload;
+      const lat = Number(p.latitude ?? p.lat);
+      const lng = Number(p.longitude ?? p.lng);
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+        displayCoords = {
+          latitude: lat,
+          longitude: lng,
+          heading: p.heading ?? null,
+          timestamp: p.timestamp || Date.now(),
+        };
+      }
+    }
+  }
+
   return (
     <div className={`flex flex-col bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden shadow-xl transition-all w-full max-w-4xl mx-auto ${
       expanded ? '' : 'h-[460px]'
