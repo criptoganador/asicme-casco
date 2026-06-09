@@ -17,65 +17,75 @@ const LiveView = ({ agentName, onDisconnect }) => {
     }
   }, [localParticipant]);
 
-  // Transmisión de GPS en tiempo real usando watchPosition
-  useEffect(() => {
-    let watchId;
+  let watchId;
 
-    const startLocationTracking = async () => {
-      try {
-        const permission = await Geolocation.requestPermissions();
-        if (permission.location !== 'granted') {
-          console.warn('Permiso de GPS denegado');
-          setGpsError(true);
+  const iniciarTransmisionGPS = async (room) => {
+    console.log('📡 Intentando iniciar el GPS...');
+
+    try {
+      // 1. Verificar y pedir permisos explícitamente
+      const check = await Geolocation.checkPermissions();
+      console.log('🛡️ Estado de permisos GPS:', check);
+      
+      if (check.location !== 'granted') {
+        console.log('⚠️ Pidiendo permisos al usuario...');
+        const request = await Geolocation.requestPermissions();
+        if (request.location !== 'granted') {
+          console.error('❌ El usuario denegó el permiso del GPS.');
           return;
         }
+      }
 
+      // 2. Empezar a escuchar la ubicación
+      console.log('✅ Permisos listos. Buscando satélites...');
+      watchId = await Geolocation.watchPosition({ enableHighAccuracy: true }, (position, err) => {
+        if (err) {
+          console.error('❌ Error crudo leyendo el GPS de Capacitor:', err);
+          return;
+        }
+        
+        console.log('📍 GPS crudo capturado:', position);
+
+        // 3. Empaquetar y enviar por LiveKit
+        const payload = JSON.stringify({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          heading: position.coords.heading,
+          timestamp: position.timestamp
+        });
+        
+        // Enviar por el canal de datos
+        const encoder = new TextEncoder();
+        room.localParticipant.publishData(encoder.encode(payload), { reliable: true });
+        console.log('📤 GPS enviado por LiveKit');
+        
+      });
+
+      return watchId;
+
+    } catch (error) {
+      console.error('💥 Error fatal al intentar usar el plugin de Geolocation:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (!room) return;
+
+    let activeWatchId;
+    const start = async () => {
+      activeWatchId = await iniciarTransmisionGPS(room);
+      if (activeWatchId) {
         setGpsActive(true);
-
-        watchId = await Geolocation.watchPosition(
-          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
-          (position, err) => {
-            if (err) {
-              console.error('Error de watchPosition:', err);
-              setGpsError(true);
-              return;
-            }
-
-            if (!position) {
-              return;
-            }
-
-            const payload = JSON.stringify({
-              type: 'gps',
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              heading: position.coords.heading ?? null,
-              timestamp: position.timestamp || Date.now(),
-            });
-
-            if (localParticipant) {
-              const encoder = new TextEncoder();
-              localParticipant.publishData(encoder.encode(payload), { reliable: true });
-              console.log('[GPS] Enviado payload:', payload);
-            }
-
-            setGpsError(false);
-          }
-        );
-      } catch (e) {
-        console.error('Error inicializando GPS', e);
-        setGpsError(true);
       }
     };
-
-    startLocationTracking();
+    start();
 
     return () => {
-      if (watchId) {
-        Geolocation.clearWatch({ id: watchId });
+      if (activeWatchId) {
+        Geolocation.clearWatch({ id: activeWatchId });
       }
     };
-  }, [localParticipant]);
+  }, [room]);
 
   const toggleMic = () => {
     if (localParticipant) {
