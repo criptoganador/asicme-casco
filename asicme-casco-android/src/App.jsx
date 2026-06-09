@@ -33,14 +33,27 @@ function App() {
       stream.getTracks().forEach(track => track.stop());
 
       if (externalCam) {
-        console.log('Cámara externa detectada:', externalCam.label);
-        return { deviceId: externalCam.deviceId };
+        const useUSB = window.confirm('Se ha detectado una cámara externa USB/OTG conectada.\n\n¿Deseas usar esta cámara para la transmisión?');
+        if (useUSB) {
+          console.log('Usando cámara externa:', externalCam.label);
+          return { deviceId: externalCam.deviceId };
+        } else {
+          console.log('Usuario rechazó cámara externa, usando trasera');
+          return { facingMode: 'environment' };
+        }
+      } else {
+        const usePhone = window.confirm('No se detectó ninguna cámara USB/OTG conectada.\n\n¿Deseas usar la cámara trasera del teléfono?');
+        if (usePhone) {
+          console.log('Usando cámara trasera por defecto');
+          return { facingMode: 'environment' };
+        } else {
+          throw new Error('USER_CANCELLED');
+        }
       }
-      
-      // 4. Fallback a cámara trasera
-      console.log('Usando cámara trasera por defecto');
-      return { facingMode: 'environment' };
     } catch (e) {
+      if (e.message === 'USER_CANCELLED') {
+        throw new Error('Conexión cancelada. No se seleccionó ninguna cámara.');
+      }
       console.warn('Error detectando cámaras, usando trasera por defecto:', e);
       return { facingMode: 'environment' };
     }
