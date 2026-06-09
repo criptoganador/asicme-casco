@@ -1,6 +1,29 @@
-import { useState } from 'react';
-import { Camera, Volume2, VolumeX, Maximize2, Minimize2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin } from 'lucide-react';
 import { useDataChannel, VideoTrack, AudioTrack } from '@livekit/components-react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix para los iconos de Leaflet en React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Componente para re-centrar el mapa cuando cambian las coordenadas
+function MapUpdater({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && center.length === 2 && !isNaN(center[0]) && !isNaN(center[1])) {
+      map.setView(center, map.getZoom(), {
+        animate: true,
+      });
+    }
+  }, [center, map]);
+  return null;
+}
 
 const AgentCard = ({ participant, isExpanded }) => {
   const [isMuted, setIsMuted] = useState(false);
@@ -151,18 +174,52 @@ const AgentCard = ({ participant, isExpanded }) => {
         />
       )}
 
-      {/* Pie de tarjeta - Telemetría GPS en texto */}
+      {/* Pie de tarjeta - Mini-Mapa GPS */}
       <div className="p-4 bg-slate-950 border-t border-slate-800">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-4 font-mono text-sm text-emerald-300">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden relative" style={{ height: expanded ? '200px' : '140px' }}>
           {displayCoords ? (
-            <div className="space-y-2">
-              <div>📍 Latitud: {displayCoords.latitude.toFixed(6)}</div>
-              <div>📍 Longitud: {displayCoords.longitude.toFixed(6)}</div>
-              <div>🧭 Dirección: {displayCoords.heading !== null && displayCoords.heading !== undefined ? `${displayCoords.heading}°` : 'N/A'}</div>
-              <div className="text-xs text-slate-400">⏱️ Última actualización: {new Date(displayCoords.timestamp).toLocaleTimeString()}</div>
-            </div>
+            <>
+              <MapContainer 
+                center={[displayCoords.latitude, displayCoords.longitude]} 
+                zoom={16} 
+                style={{ height: '100%', width: '100%' }}
+                zoomControl={false}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Marker position={[displayCoords.latitude, displayCoords.longitude]}>
+                  <Popup>
+                    <div className="text-center font-mono text-xs">
+                      <b>{participant.name || participant.identity}</b><br/>
+                      Lat: {displayCoords.latitude.toFixed(5)}<br/>
+                      Lng: {displayCoords.longitude.toFixed(5)}<br/>
+                      {displayCoords.heading !== null && displayCoords.heading !== undefined ? `Dirección: ${displayCoords.heading}°` : ''}
+                    </div>
+                  </Popup>
+                </Marker>
+                <MapUpdater center={[displayCoords.latitude, displayCoords.longitude]} />
+              </MapContainer>
+              {/* Overlay de telemetría */}
+              <div className="absolute top-2 left-2 z-[400] bg-slate-900/80 backdrop-blur-md rounded-lg p-2 border border-slate-700/50 shadow-lg pointer-events-none">
+                <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs">
+                  <span className="flex h-1.5 w-1.5 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                  </span>
+                  GPS ACTIVO
+                </div>
+                <div className="text-[10px] text-slate-300 mt-1">
+                  Actualizado: {new Date(displayCoords.timestamp).toLocaleTimeString()}
+                </div>
+              </div>
+            </>
           ) : (
-            <div className="animate-pulse text-emerald-400">Esperando señal GPS...</div>
+            <div className="flex flex-col items-center justify-center h-full text-emerald-400/60 font-mono text-sm bg-slate-900">
+              <MapPin className="w-8 h-8 mb-2 opacity-50 animate-bounce" />
+              Esperando señal GPS...
+            </div>
           )}
         </div>
       </div>
