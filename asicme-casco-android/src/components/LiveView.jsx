@@ -17,13 +17,12 @@ const LiveView = ({ agentName, onDisconnect }) => {
     }
   }, [localParticipant]);
 
-  // Transmisión periódica de GPS
+  // Transmisión de GPS en tiempo real usando watchPosition
   useEffect(() => {
-    let intervalId;
+    let watchId;
 
     const startLocationTracking = async () => {
       try {
-        // Pedir permiso en Android nativo o navegador
         const permission = await Geolocation.requestPermissions();
         if (permission.location !== 'granted') {
           console.warn('Permiso de GPS denegado');
@@ -33,37 +32,48 @@ const LiveView = ({ agentName, onDisconnect }) => {
 
         setGpsActive(true);
 
-        // Enviar ubicación cada 3 segundos
-        intervalId = setInterval(async () => {
-          try {
-            const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        watchId = await Geolocation.watchPosition(
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
+          (position, err) => {
+            if (err) {
+              console.error('Error de watchPosition:', err);
+              setGpsError(true);
+              return;
+            }
+
+            if (!position) {
+              return;
+            }
+
             const payload = JSON.stringify({
               type: 'gps',
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              heading: position.coords.heading ?? null,
+              timestamp: position.timestamp || Date.now(),
             });
 
-            // Enviar por el canal de datos de LiveKit
             if (localParticipant) {
               const encoder = new TextEncoder();
-              localParticipant.publishData(encoder.encode(payload), { reliable: false });
+              localParticipant.publishData(encoder.encode(payload), { reliable: true });
               console.log('[GPS] Enviado payload:', payload);
             }
+
             setGpsError(false);
-          } catch (e) {
-            console.error('Error obteniendo GPS', e);
-            setGpsError(true);
           }
-        }, 3000);
+        );
       } catch (e) {
         console.error('Error inicializando GPS', e);
+        setGpsError(true);
       }
     };
 
     startLocationTracking();
 
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      if (watchId) {
+        Geolocation.clearWatch({ id: watchId });
+      }
     };
   }, [localParticipant]);
 

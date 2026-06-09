@@ -90,7 +90,7 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
         {/* Contenido Principal */}
         <div className="flex-1 flex flex-col w-full h-full relative overflow-hidden">
           {activeTab === 'grid' ? (
-            <AgentGrid selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
+            <AgentGrid selectedAgentId={selectedAgentId} />
           ) : (
             <GlobalMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
           )}

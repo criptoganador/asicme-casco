@@ -2,7 +2,7 @@
 import AgentCard from './AgentCard';
 import { useParticipants } from '@livekit/components-react';
 
-const AgentGrid = ({ selectedAgentId, agentLocations }) => {
+const AgentGrid = ({ selectedAgentId }) => {
   // Obtenemos todos los participantes de LiveKit nativamente
   const participants = useParticipants();
   
@@ -41,7 +41,6 @@ const AgentGrid = ({ selectedAgentId, agentLocations }) => {
           key={agent.identity} 
           participant={agent} 
           isExpanded={displayedAgents.length === 1}
-          location={agentLocations && agentLocations[agent.identity] ? agentLocations[agent.identity] : null}
         />
       ))}
     </div>

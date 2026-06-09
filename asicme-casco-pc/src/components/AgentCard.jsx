@@ -1,12 +1,29 @@
 import { useState } from 'react';
-import { Camera, MapPin, Volume2, VolumeX, Maximize2, Minimize2 } from 'lucide-react';
-import { VideoTrack, AudioTrack } from '@livekit/components-react';
+import { Camera, Volume2, VolumeX, Maximize2, Minimize2 } from 'lucide-react';
+import { useDataChannel, VideoTrack, AudioTrack } from '@livekit/components-react';
 
-const AgentCard = ({ participant, isExpanded, location }) => {
+const AgentCard = ({ participant, isExpanded }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [localExpanded, setLocalExpanded] = useState(false);
+  const [agentCoords, setAgentCoords] = useState(null);
 
   const expanded = Boolean(isExpanded) || localExpanded;
+
+  useDataChannel((msg) => {
+    try {
+      const payload = JSON.parse(new TextDecoder().decode(msg.payload));
+      if (msg.from?.identity === participant.identity && payload.type === 'gps') {
+        setAgentCoords({
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          heading: payload.heading,
+          timestamp: payload.timestamp || Date.now(),
+        });
+      }
+    } catch (e) {
+      console.error('AgentCard DataChannel parse error', e);
+    }
+  });
 
   // Obtener los tracks de video y audio del participante real
   const videoTrackRef = Array.from(participant.videoTrackPublications.values()).find(p => p.source === 'camera');
@@ -95,28 +112,19 @@ const AgentCard = ({ participant, isExpanded, location }) => {
         />
       )}
 
-      {/* Pie de tarjeta - GPS y estado */}
-      <div className="px-4 py-3 bg-slate-50 flex flex-col gap-3 border-t border-slate-200 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-1 text-sm text-slate-600 md:flex-row md:items-center">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-slate-500">
-              <MapPin className={`w-4 h-4 ${location ? 'text-sky-500' : 'text-slate-400'}`} />
-              {location ? (
-                <span className="text-slate-900 font-semibold">
-                  GPS: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
-                </span>
-              ) : (
-                <span className="text-slate-900 font-semibold">GPS pendiente</span>
-              )}
+      {/* Pie de tarjeta - Telemetría GPS en texto */}
+      <div className="p-4 bg-slate-950 border-t border-slate-800">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900 p-4 font-mono text-sm text-emerald-300">
+          {agentCoords ? (
+            <div className="space-y-2">
+              <div>📍 Latitud: {agentCoords.latitude.toFixed(6)}</div>
+              <div>📍 Longitud: {agentCoords.longitude.toFixed(6)}</div>
+              <div>🧭 Dirección: {agentCoords.heading !== null && agentCoords.heading !== undefined ? `${agentCoords.heading}°` : 'N/A'}</div>
+              <div className="text-xs text-slate-400">⏱️ Última actualización: {new Date(agentCoords.timestamp).toLocaleTimeString()}</div>
             </div>
-            {!location && (
-              <span className="text-[11px] text-slate-500">Esperando datos de ubicación en tiempo real</span>
-            )}
-          </div>
-        </div>
-        <div className="inline-flex items-center justify-between gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 border border-slate-200 shadow-sm">
-          <span>{location ? 'Ubicación activa' : 'Ubicación offline'}</span>
-          <span className={`inline-flex h-2 w-2 rounded-full ${location ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+          ) : (
+            <div className="animate-pulse text-emerald-400">Esperando señal GPS...</div>
+          )}
         </div>
       </div>
     </div>
