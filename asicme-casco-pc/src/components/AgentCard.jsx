@@ -12,18 +12,19 @@ const AgentCard = ({ participant, isExpanded }) => {
   useDataChannel((msg) => {
     try {
       const payload = JSON.parse(new TextDecoder().decode(msg.payload));
-      const nombreEnTarjeta = String(participant.identity || '').toLowerCase();
-      const nombreRemitente = String(msg.from?.identity || '').toLowerCase();
+      const nombreEnTarjeta = String(participant.identity || participant.name || '').trim().toLowerCase();
+      const nombreRemitente = String(msg.from?.identity || msg.participant?.identity || '').trim().toLowerCase();
       const isGpsPayload = payload.type === 'gps' || (
         payload.latitude !== undefined && payload.longitude !== undefined
       );
 
-      console.log(`[LiveKit] DataChannel recibido de: ${msg.from?.identity}`, payload);
+      console.log(`[LiveKit] DataChannel recibido de: ${msg.from?.identity || msg.participant?.identity}`, payload);
+      console.log('AgentCard nombreEnTarjeta:', nombreEnTarjeta, 'nombreRemitente:', nombreRemitente);
 
       if (nombreRemitente === nombreEnTarjeta && isGpsPayload) {
         setAgentCoords({
-          latitude: payload.latitude,
-          longitude: payload.longitude,
+          latitude: Number(payload.latitude),
+          longitude: Number(payload.longitude),
           heading: payload.heading ?? null,
           timestamp: payload.timestamp || Date.now(),
         });
