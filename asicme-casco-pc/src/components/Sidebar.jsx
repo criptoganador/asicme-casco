@@ -26,10 +26,10 @@ const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
           <div className="p-4">
         <button
           onClick={() => onSelectAgent(null)}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border transition-colors font-semibold ${
+          className={`w-full inline-flex items-center justify-center gap-2 py-2 px-4 rounded-full border text-sm transition-all duration-200 font-semibold ${
             selectedAgentId === null
-              ? 'bg-sky-700 text-white border-sky-800 shadow-lg shadow-sky-900/10'
-              : 'bg-white text-sky-900 border-sky-200 hover:bg-sky-50'
+              ? 'bg-sky-700 text-white border-sky-700 shadow-lg shadow-sky-700/20 hover:bg-sky-800'
+              : 'bg-white text-sky-900 border-sky-200 hover:border-sky-300 hover:bg-sky-50'
           }`}
         >
           <Users className="w-4 h-4" />
