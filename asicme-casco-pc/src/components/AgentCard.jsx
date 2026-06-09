@@ -249,17 +249,12 @@ const AgentCard = ({ participant, isExpanded }) => {
                       longitude: Number(displayCoords.longitude) || 0,
                       latitude: Number(displayCoords.latitude) || 0,
                       zoom: 16.5,
-                      pitch: 45,
+                      pitch: 60,
                       bearing: Number(displayCoords.heading) || 0
                     }}
                     mapStyle="mapbox://styles/mapbox/dark-v11"
                     style={{ width: '100%', height: '100%' }}
-                    maxPitch={60}
-                    onError={(e) => {
-                      // Suprimir el error específico de NaN en terrain 3D (bug conocido de Mapbox)
-                      if (e?.error?.message?.includes('NaN')) return;
-                      console.warn('Mapbox error:', e?.error?.message);
-                    }}
+                    terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
                     onLoad={(e) => {
                       const map = e.target;
                       // Añadir capa de elevación 3D
