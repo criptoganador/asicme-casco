@@ -98,14 +98,19 @@ const AgentCard = ({ participant, isExpanded, location }) => {
       {/* Pie de tarjeta - GPS y estado */}
       <div className="px-4 py-3 bg-slate-50 flex flex-col gap-3 border-t border-slate-200 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-1 text-sm text-slate-600 md:flex-row md:items-center">
-          <div className="flex items-center gap-2 text-slate-500">
-            <MapPin className={`w-4 h-4 ${location ? 'text-sky-500' : 'text-slate-400'}`} />
-            {location ? (
-              <span className="text-slate-900 font-semibold">
-                GPS: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
-              </span>
-            ) : (
-              <span>[GPS: Pendiente de datos]</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-slate-500">
+              <MapPin className={`w-4 h-4 ${location ? 'text-sky-500' : 'text-slate-400'}`} />
+              {location ? (
+                <span className="text-slate-900 font-semibold">
+                  GPS: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+                </span>
+              ) : (
+                <span className="text-slate-900 font-semibold">GPS pendiente</span>
+              )}
+            </div>
+            {!location && (
+              <span className="text-[11px] text-slate-500">Esperando datos de ubicación en tiempo real</span>
             )}
           </div>
         </div>

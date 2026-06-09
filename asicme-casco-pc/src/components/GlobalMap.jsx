@@ -52,6 +52,7 @@ const GlobalMap = ({ agentLocations, selectedAgentId }) => {
   const subtitle = selectedAgentId
     ? `Ubicación de ${displayedAgents[0]?.name || displayedAgents[0]?.identity || 'este agente'}`
     : `SISTEMA ACTIVO • ${agents.length} AGENTES MONITOREADOS`;
+  const hasLocation = validLocations.length > 0;
 
   return (
     <div className="flex-1 relative w-full h-full bg-white">
@@ -65,6 +66,15 @@ const GlobalMap = ({ agentLocations, selectedAgentId }) => {
           {subtitle}
         </div>
       </div>
+
+      {selectedAgentId && !hasLocation && (
+        <div className="absolute inset-0 z-[1001] flex items-center justify-center bg-white/80 p-6">
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/30">
+            <p className="text-lg font-semibold text-slate-900">Esperando ubicación del agente</p>
+            <p className="mt-2 text-sm text-slate-500">Aún no hemos recibido datos GPS de este agente. El video está activo pero la localización llega después.</p>
+          </div>
+        </div>
+      )}
 
       {/* Contenedor de Leaflet */}
       <MapContainer 
