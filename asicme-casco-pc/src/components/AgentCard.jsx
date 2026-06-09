@@ -18,9 +18,6 @@ const AgentCard = ({ participant, isExpanded }) => {
         payload.latitude !== undefined && payload.longitude !== undefined
       );
 
-      console.log(`[LiveKit] DataChannel recibido de: ${msg.from?.identity || msg.participant?.identity}`, payload);
-      console.log('AgentCard nombreEnTarjeta:', nombreEnTarjeta, 'nombreRemitente:', nombreRemitente);
-
       // Permissive matching: exact match or substring (both ways)
       const matchesIdentity = (
         nombreRemitente === nombreEnTarjeta ||
@@ -32,8 +29,6 @@ const AgentCard = ({ participant, isExpanded }) => {
       const lat = Number(payload.latitude);
       const lng = Number(payload.longitude);
       const hasValidCoords = !Number.isNaN(lat) && !Number.isNaN(lng);
-
-      console.log('AgentCard match:', matchesIdentity, 'hasValidCoords:', hasValidCoords);
 
       if (matchesIdentity && isGpsPayload && hasValidCoords) {
         setAgentCoords({

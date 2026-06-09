@@ -40,7 +40,6 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
   useDataChannel('gps', (msg) => {
     try {
       const payload = JSON.parse(new TextDecoder().decode(msg.payload));
-      console.log('[LiveKit] DataChannel recibido:', msg.from?.identity, payload);
       // store last GPS globally for quick UI fallback
       if (payload && (payload.latitude !== undefined || payload.lat !== undefined)) {
         window.__LAST_GPS__ = {
