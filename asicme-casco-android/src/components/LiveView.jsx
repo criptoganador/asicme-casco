@@ -9,13 +9,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsError, setGpsError] = useState(false);
 
-  // Intentar encender cámara y micro al entrar
-  useEffect(() => {
-    if (localParticipant) {
-      localParticipant.setCameraEnabled(true).catch(console.error);
-      localParticipant.setMicrophoneEnabled(true).catch(console.error);
-    }
-  }, [localParticipant]);
+  // La cámara y el micro se inicializan automáticamente por <LiveKitRoom video={true} audio={true}>
 
 
   const iniciarTransmisionGPS = async (room) => {
