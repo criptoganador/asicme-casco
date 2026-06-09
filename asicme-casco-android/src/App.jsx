@@ -52,7 +52,7 @@ function App() {
       }
     } catch (e) {
       if (e.message === 'USER_CANCELLED') {
-        throw new Error('Conexión cancelada. No se seleccionó ninguna cámara.');
+        throw new Error('Conexión cancelada. No se seleccionó ninguna cámara.', { cause: e });
       }
       console.warn('Error detectando cámaras, usando trasera por defecto:', e);
       return { facingMode: 'environment' };
