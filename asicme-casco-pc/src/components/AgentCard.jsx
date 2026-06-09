@@ -21,10 +21,24 @@ const AgentCard = ({ participant, isExpanded }) => {
       console.log(`[LiveKit] DataChannel recibido de: ${msg.from?.identity || msg.participant?.identity}`, payload);
       console.log('AgentCard nombreEnTarjeta:', nombreEnTarjeta, 'nombreRemitente:', nombreRemitente);
 
-      if (nombreRemitente === nombreEnTarjeta && isGpsPayload) {
+      // Permissive matching: exact match or substring (both ways)
+      const matchesIdentity = (
+        nombreRemitente === nombreEnTarjeta ||
+        (nombreRemitente && nombreEnTarjeta && nombreRemitente.includes(nombreEnTarjeta)) ||
+        (nombreRemitente && nombreEnTarjeta && nombreEnTarjeta.includes(nombreRemitente))
+      );
+
+      // Ensure payload contains valid numeric coordinates
+      const lat = Number(payload.latitude);
+      const lng = Number(payload.longitude);
+      const hasValidCoords = !Number.isNaN(lat) && !Number.isNaN(lng);
+
+      console.log('AgentCard match:', matchesIdentity, 'hasValidCoords:', hasValidCoords);
+
+      if (matchesIdentity && isGpsPayload && hasValidCoords) {
         setAgentCoords({
-          latitude: Number(payload.latitude),
-          longitude: Number(payload.longitude),
+          latitude: lat,
+          longitude: lng,
           heading: payload.heading ?? null,
           timestamp: payload.timestamp || Date.now(),
         });
