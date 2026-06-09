@@ -2,8 +2,15 @@ import { useState, useEffect } from 'react';
 import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin, Layers } from 'lucide-react';
 import { useDataChannel, VideoTrack, AudioTrack } from '@livekit/components-react';
 import { MapContainer, TileLayer, Marker as LeafletMarker, Popup as LeafletPopup, useMap } from 'react-leaflet';
+import mapboxgl from 'mapbox-gl';
 import Map, { Marker as MapboxMarker } from 'react-map-gl/mapbox';
 import L from 'leaflet';
+
+// Fix para el error "import.meta outside a module" de Vite con Mapbox GL v3
+// Importamos el worker pre-empaquetado de Mapbox y le decimos a Vite que lo trate como un Web Worker
+import MapboxWorker from 'mapbox-gl/dist/mapbox-gl-csp-worker?worker';
+mapboxgl.workerClass = MapboxWorker;
+
 
 // Fix para los iconos de Leaflet en React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -303,8 +310,8 @@ const AgentCard = ({ participant, isExpanded }) => {
                     }}
                   >
                     <MapboxMarker 
-                      longitude={displayCoords.longitude} 
-                      latitude={displayCoords.latitude}
+                      longitude={Number(displayCoords.longitude) || 0} 
+                      latitude={Number(displayCoords.latitude) || 0}
                       anchor="center"
                     >
                        <div style={{ transform: `rotate(${displayCoords.heading || 0}deg)` }} className="relative flex items-center justify-center w-16 h-16">
