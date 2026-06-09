@@ -10,7 +10,7 @@ const Sidebar = ({ selectedAgentId, onSelectAgent, agentLocations }) => {
   const agents = participants.filter(p => p.identity !== 'CommandCenter');
 
   return (
-    <aside className="w-80 flex flex-col h-full bg-gradient-to-br from-sky-600 via-blue-600 to-indigo-700 shadow-2xl shadow-sky-900/25 z-20">
+    <aside className="w-80 mt-2.5 flex flex-col h-full bg-gradient-to-br from-sky-600 via-blue-600 to-indigo-700 shadow-2xl shadow-sky-900/25 z-20">
       <div className="flex h-full flex-col rounded-r-[2rem] bg-white shadow-sm overflow-hidden">
           <div className="p-4">
         <button
