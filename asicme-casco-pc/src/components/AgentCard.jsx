@@ -9,7 +9,7 @@ const AgentCard = ({ participant, isExpanded }) => {
 
   const expanded = Boolean(isExpanded) || localExpanded;
 
-  useDataChannel((msg) => {
+  useDataChannel('gps', (msg) => {
     try {
       const payload = JSON.parse(new TextDecoder().decode(msg.payload));
       const nombreEnTarjeta = String(participant.identity || participant.name || '').trim().toLowerCase();
@@ -67,7 +67,7 @@ const AgentCard = ({ participant, isExpanded }) => {
           latitude: lat,
           longitude: lng,
           heading: p.heading ?? null,
-          timestamp: p.timestamp || Date.now(),
+          timestamp: p.timestamp,
         };
       }
     }
@@ -159,12 +159,12 @@ const AgentCard = ({ participant, isExpanded }) => {
       {/* Pie de tarjeta - Telemetría GPS en texto */}
       <div className="p-4 bg-slate-950 border-t border-slate-800">
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-4 font-mono text-sm text-emerald-300">
-          {agentCoords ? (
+          {displayCoords ? (
             <div className="space-y-2">
-              <div>📍 Latitud: {agentCoords.latitude.toFixed(6)}</div>
-              <div>📍 Longitud: {agentCoords.longitude.toFixed(6)}</div>
-              <div>🧭 Dirección: {agentCoords.heading !== null && agentCoords.heading !== undefined ? `${agentCoords.heading}°` : 'N/A'}</div>
-              <div className="text-xs text-slate-400">⏱️ Última actualización: {new Date(agentCoords.timestamp).toLocaleTimeString()}</div>
+              <div>📍 Latitud: {displayCoords.latitude.toFixed(6)}</div>
+              <div>📍 Longitud: {displayCoords.longitude.toFixed(6)}</div>
+              <div>🧭 Dirección: {displayCoords.heading !== null && displayCoords.heading !== undefined ? `${displayCoords.heading}°` : 'N/A'}</div>
+              <div className="text-xs text-slate-400">⏱️ Última actualización: {new Date(displayCoords.timestamp).toLocaleTimeString()}</div>
             </div>
           ) : (
             <div className="animate-pulse text-emerald-400">Esperando señal GPS...</div>

@@ -37,7 +37,7 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
   const [agentLocations, setAgentLocations] = useState({});
 
   // Escuchar el DataChannel para las coordenadas GPS
-  useDataChannel((msg) => {
+  useDataChannel('gps', (msg) => {
     try {
       const payload = JSON.parse(new TextDecoder().decode(msg.payload));
       console.log('[LiveKit] DataChannel recibido:', msg.from?.identity, payload);

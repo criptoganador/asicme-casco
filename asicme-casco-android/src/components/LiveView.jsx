@@ -17,7 +17,6 @@ const LiveView = ({ agentName, onDisconnect }) => {
     }
   }, [localParticipant]);
 
-  let watchId;
 
   const iniciarTransmisionGPS = async (room) => {
     console.log('📡 Intentando iniciar el GPS...');
@@ -32,15 +31,17 @@ const LiveView = ({ agentName, onDisconnect }) => {
         const request = await Geolocation.requestPermissions();
         if (request.location !== 'granted') {
           console.error('❌ El usuario denegó el permiso del GPS.');
+          setGpsError(true);
           return;
         }
       }
 
       // 2. Empezar a escuchar la ubicación
       console.log('✅ Permisos listos. Buscando satélites...');
-      watchId = await Geolocation.watchPosition({ enableHighAccuracy: true }, (position, err) => {
+      const watchId = await Geolocation.watchPosition({ enableHighAccuracy: true }, (position, err) => {
         if (err) {
           console.error('❌ Error crudo leyendo el GPS de Capacitor:', err);
+          setGpsError(true);
           return;
         }
         
@@ -48,6 +49,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
 
         // 3. Empaquetar y enviar por LiveKit
         const payload = JSON.stringify({
+          type: 'gps',
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           heading: position.coords.heading,
@@ -56,7 +58,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
         
         // Enviar por el canal de datos
         const encoder = new TextEncoder();
-        room.localParticipant.publishData(encoder.encode(payload), { reliable: true });
+        room.localParticipant.publishData(encoder.encode(payload), { reliable: true, topic: 'gps' });
         console.log('📤 GPS enviado por LiveKit');
         
       });
@@ -65,6 +67,7 @@ const LiveView = ({ agentName, onDisconnect }) => {
 
     } catch (error) {
       console.error('💥 Error fatal al intentar usar el plugin de Geolocation:', error);
+      setGpsError(true);
     }
   };
 
