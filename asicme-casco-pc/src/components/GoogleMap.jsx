@@ -3,11 +3,17 @@ import { useEffect, useRef, useState } from 'react';
 const loadGoogleMaps = (apiKey) => {
   return new Promise((resolve, reject) => {
     if (window.google && window.google.maps) return resolve(window.google.maps);
+    
+    // Asignamos el callback global que Google llamará cuando termine de inicializar
+    window.__initGoogleMaps = () => {
+      resolve(window.google.maps);
+      delete window.__initGoogleMaps;
+    };
+
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&callback=Function.prototype`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&callback=__initGoogleMaps`;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve(window.google.maps);
     script.onerror = reject;
     document.head.appendChild(script);
   });
