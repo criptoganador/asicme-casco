@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import TopHeader from './components/TopHeader';
 import AgentGrid from './components/AgentGrid';
 import GlobalMap from './components/GlobalMap';
+import GoogleMap from './components/GoogleMap';
 
 function MicrophoneController() {
   const { localParticipant } = useLocalParticipant();
@@ -100,7 +101,9 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
           {activeTab === 'grid' ? (
             <AgentGrid selectedAgentId={selectedAgentId} />
           ) : (
-            <GlobalMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
+            (import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
+              ? <GoogleMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
+              : <GlobalMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
           )}
         </div>
       </main>
