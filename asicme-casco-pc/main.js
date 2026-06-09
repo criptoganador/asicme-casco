@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 // ─────────────────────────────────────────────────────────────
 function setupSessionPermissions() {
   // Intercepción de peticiones de permiso (lo que normalmente causa el popup del navegador)
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     const allowed = [
       'media',          // Cámara + Micrófono (WebRTC)
       'microphone',
@@ -32,7 +32,7 @@ function setupSessionPermissions() {
   });
 
   // Verificación de permisos (para fetch/check de APIs web como navigator.permissions.query)
-  session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
     const allowed = ['media', 'microphone', 'camera', 'audioCapture', 'videoCapture', 'geolocation'];
     if (allowed.includes(permission)) {
       console.log(`[Permisos] Check de permiso: ${permission} → CONCEDIDO`);
@@ -112,7 +112,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 700,
     title: 'AsicMe Casco — Centro de Mando',
-    backgroundColor: '#09090b',   // zinc-950: evita el flash blanco al arrancar
+    backgroundColor: '#ffffff',   // blanco: evita el flash oscuro al arrancar
     webPreferences: {
       nodeIntegration: false,       // Seguridad: NO exponer Node.js al renderer web
       contextIsolation: true,       // Seguridad: aislar el contexto de JS del preload y el renderer

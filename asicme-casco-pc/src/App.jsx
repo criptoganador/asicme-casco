@@ -51,7 +51,7 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
   });
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-50 text-slate-900 overflow-hidden font-sans">
+    <div className="flex min-h-screen w-full flex-col bg-white text-slate-900 overflow-hidden font-sans">
       <TopHeader />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 
@@ -128,7 +128,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50">
+    <div className="min-h-screen w-full bg-white">
       {token === '' ? (
         <div className="flex h-screen items-center justify-center text-slate-500 gap-4">
            <div className="w-12 h-12 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin"></div>

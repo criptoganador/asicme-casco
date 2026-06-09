@@ -61,10 +61,10 @@ const MicrophoneSelector = () => {
 
   return (
     <div className="relative px-4 py-2">
-      <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1.5">Micrófono activo</p>
+      <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1.5">Micrófono activo</p>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 transition-colors"
+        className="w-full flex items-center justify-between gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors"
       >
         <div className="flex items-center gap-2 truncate">
           <Mic className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
@@ -72,20 +72,20 @@ const MicrophoneSelector = () => {
             {selectedDevice?.label || 'Seleccionar micrófono'}
           </span>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-4 right-4 mb-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+        <div className="absolute bottom-full left-4 right-4 mb-1 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden">
           {devices.map(device => (
             <button
               key={device.deviceId}
               onClick={() => handleSelect(device.deviceId)}
-              className={`w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs transition-colors hover:bg-zinc-700 ${
-                selected === device.deviceId ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-300'
+              className={`w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs transition-colors hover:bg-slate-100 ${
+                selected === device.deviceId ? 'bg-emerald-50 text-emerald-600' : 'text-slate-700'
               }`}
             >
-              <Mic className={`w-3.5 h-3.5 flex-shrink-0 ${selected === device.deviceId ? 'text-emerald-500' : 'text-zinc-500'}`} />
+              <Mic className={`w-3.5 h-3.5 flex-shrink-0 ${selected === device.deviceId ? 'text-emerald-500' : 'text-slate-500'}`} />
               <span className="truncate">{device.label}</span>
               {selected === device.deviceId && (
                 <span className="ml-auto text-[10px] font-bold text-emerald-500">ACTIVO</span>

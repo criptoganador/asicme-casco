@@ -50,14 +50,14 @@ const GlobalMap = ({ agentLocations }) => {
   const mapZoom = validLocations.length > 0 ? 14 : defaultZoom;
 
   return (
-    <div className="flex-1 relative w-full h-full bg-zinc-950">
+    <div className="flex-1 relative w-full h-full bg-white">
       
       {/* HUD Superior (Z-Index alto para estar sobre el mapa) */}
       <div className="absolute top-6 left-6 z-[1000] flex flex-col gap-2 pointer-events-none">
-        <h2 className="text-2xl font-bold text-zinc-100 tracking-wider drop-shadow-md">
+        <h2 className="text-2xl font-bold text-slate-900 tracking-wider drop-shadow-sm">
           RADAR TÁCTICO GLOBAL
         </h2>
-        <div className="text-sm font-mono text-emerald-500 animate-pulse drop-shadow-md bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg w-fit border border-emerald-500/20">
+        <div className="text-sm font-mono text-emerald-600 animate-pulse drop-shadow-sm bg-white/70 backdrop-blur-md px-3 py-1.5 rounded-lg w-fit border border-emerald-200">
           SISTEMA ACTIVO • {agents.length} AGENTES MONITOREADOS
         </div>
       </div>
@@ -91,14 +91,14 @@ const GlobalMap = ({ agentLocations }) => {
               icon={icon}
             >
               <Popup className="custom-popup">
-                <div className="font-bold text-zinc-900 text-sm flex items-center gap-2 mb-1">
+                <div className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-1">
                   {agent.name || agent.identity}
                   {isLive && <span className="w-2 h-2 rounded-full animate-pulse bg-emerald-500"></span>}
                 </div>
-                <div className="text-xs font-bold text-emerald-600 mb-2 border-b border-zinc-200 pb-1">
+                <div className="text-xs font-bold text-emerald-600 mb-2 border-b border-slate-200 pb-1">
                   SEGUIMIENTO GPS ACTIVO
                 </div>
-                <div className="text-[10px] text-zinc-600 font-mono leading-tight">
+                <div className="text-[10px] text-slate-600 font-mono leading-tight">
                   Lat: {location.lat.toFixed(6)}<br/>
                   Lng: {location.lng.toFixed(6)}
                 </div>
