@@ -59,7 +59,7 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
   });
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-white text-slate-900 overflow-hidden font-sans">
+    <div className="flex min-h-screen w-full flex-col bg-white text-slate-900 overflow-hidden font-sans" style={{ height: '100vh' }}>
       <TopHeader />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 
@@ -95,11 +95,13 @@ function MainLayout({ selectedAgentId, onSelectAgent, activeTab, setActiveTab })
         </div>
 
         {/* Contenido Principal */}
-        <div className="flex-1 flex flex-col w-full h-full relative overflow-hidden">
+        <div className="flex-1 flex flex-col w-full relative overflow-hidden" style={{ minHeight: 0 }}>
           {activeTab === 'grid' ? (
             <AgentGrid selectedAgentId={selectedAgentId} />
           ) : (
-            <GlobalMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
+            <div style={{ position: 'absolute', inset: 0 }}>
+              <GlobalMap selectedAgentId={selectedAgentId} agentLocations={agentLocations} />
+            </div>
           )}
         </div>
       </main>
