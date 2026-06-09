@@ -148,7 +148,12 @@ function App() {
           video={!rtspUrl} // Si es cámara IP, desactivamos la captura estándar
           audio={true}
           options={{
-            videoCaptureDefaults: cameraConfig || { facingMode: 'environment' }
+            videoCaptureDefaults: cameraConfig || { facingMode: 'environment' },
+            audioCaptureDefaults: {
+              noiseSuppression: true,
+              echoCancellation: true,
+              autoGainControl: true,
+            }
           }}
           token={token}
           serverUrl={import.meta.env.VITE_LIVEKIT_URL}
