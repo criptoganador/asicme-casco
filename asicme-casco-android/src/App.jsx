@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
+import { Camera } from '@capacitor/camera';
 import LoginView from './components/LoginView';
 import LiveView from './components/LiveView';
 import SplashScreen from './components/SplashScreen';
@@ -16,7 +17,10 @@ function App() {
 
   const getBestCamera = async () => {
     try {
-      // 1. Pedir permiso para obtener los nombres reales de las cámaras
+      // 0. Asegurar el permiso base de Android antes de interactuar con el hardware
+      await Camera.requestPermissions({ permissions: ['camera'] });
+
+      // 1. Pedir permiso web para obtener los nombres reales de las cámaras
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       
       // 2. Enumerar todas las cámaras
