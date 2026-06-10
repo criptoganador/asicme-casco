@@ -9,10 +9,25 @@ const LoginView = ({ onConnect }) => {
   const [showIpOptions, setShowIpOptions] = useState(false);
   const [ipCamUrl, setIpCamUrl] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (agentName.trim().length > 0) {
-      onConnect(agentName.trim(), ipCamUrl.trim(), isCameraConnected);
+      if (isCameraConnected && !ipCamUrl.trim()) {
+        try {
+          // 1. Solicitar el permiso nativo de USB al usuario
+          await UsbBridge.requestCameraPermission();
+          // 2. Iniciar el servidor local MJPEG y obtener la ruta (http://127.0.0.1:8080/stream)
+          const res = await UsbBridge.startStream();
+          // 3. Conectar usando el flujo de cámara IP (Canvas Relay)
+          onConnect(agentName.trim(), res.url, true);
+        } catch (error) {
+          console.error("Error iniciando cámara UVC:", error);
+          alert("Error al acceder a la cámara USB: " + (error.message || error));
+        }
+      } else {
+        // Flujo normal (cámara del celular o cámara IP manual)
+        onConnect(agentName.trim(), ipCamUrl.trim(), false);
+      }
     }
   };
 

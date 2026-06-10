@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.app.PendingIntent;
+import android.os.Build;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -16,6 +18,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class UsbBridgePlugin extends Plugin {
 
     private BroadcastReceiver usbReceiver;
+    private MjpegServer mjpegServer;
+    private static final String ACTION_USB_PERMISSION = "com.asicme.casco.USB_PERMISSION";
 
     @Override
     public void load() {
@@ -73,6 +77,56 @@ public class UsbBridgePlugin extends Plugin {
         } else {
             ret.put("hasDevices", false);
         }
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void requestCameraPermission(PluginCall call) {
+        UsbManager manager = (UsbManager) getContext().getSystemService(Context.USB_SERVICE);
+        if (manager == null || manager.getDeviceList().isEmpty()) {
+            call.reject("No USB devices attached");
+            return;
+        }
+
+        // Tomar el primer dispositivo USB disponible (asumiendo que es la cámara)
+        UsbDevice device = manager.getDeviceList().values().iterator().next();
+
+        if (manager.hasPermission(device)) {
+            call.resolve();
+            return;
+        }
+
+        // Crear PendingIntent para solicitar permisos nativos
+        int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
+        PendingIntent permissionIntent = PendingIntent.getBroadcast(getContext(), 0, new Intent(ACTION_USB_PERMISSION), flags);
+        
+        // Android lanzará el diálogo "¿Permitir acceso a [App]?"
+        manager.requestPermission(device, permissionIntent);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void startStream(PluginCall call) {
+        // Inicializar Servidor MJPEG Local en el puerto 8080 si no está activo
+        if (mjpegServer == null) {
+            try {
+                mjpegServer = new MjpegServer(8080);
+                mjpegServer.start();
+            } catch (Exception e) {
+                call.reject("Error iniciando servidor Mjpeg", e);
+                return;
+            }
+        }
+
+        // AQUI VA LA INICIALIZACIÓN NATIVA DE UVCCAMERA
+        // Como AndroidUSBCamera se ejecuta asíncronamente, 
+        // configuraremos el Frame Callback para alimentar a mjpegServer.updateFrame(bytes)
+        
+        // TODO: Inicializar IFrameCallback de AndroidUSBCamera 
+        // y enviar los frames usando mjpegServer.updateFrame(jpegBytes);
+        
+        JSObject ret = new JSObject();
+        ret.put("url", "http://127.0.0.1:8080/stream");
         call.resolve(ret);
     }
 }

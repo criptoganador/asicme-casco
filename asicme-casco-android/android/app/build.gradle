@@ -40,6 +40,10 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    // UVC Camera & MJPEG Server
+    implementation 'com.serenegiant:common:2.12.4'
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
 }
 
 apply from: 'capacitor.build.gradle'
