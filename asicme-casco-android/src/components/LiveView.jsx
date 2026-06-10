@@ -14,8 +14,8 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   const [ipCamError, setIpCamError] = useState(false);
   const [ipCamActive, setIpCamActive] = useState(false);
 
-  // Refs para el modo cámara IP
-  const ipVideoRef = useRef(null);
+  // Refs para el modo cámara IP / MJPEG
+  const ipMediaRef = useRef(null);
   const canvasRef = useRef(null);
   const ipTrackRef = useRef(null);
   const rafRef = useRef(null);
@@ -94,14 +94,15 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
     };
   }, [room]);
 
-  // ─── CÁMARA IP (canvas relay) ────────────────────────────────────────────────
+  // ─── CÁMARA IP Y MJPEG (canvas relay) ────────────────────────────────────────
   useEffect(() => {
     if (!rtspUrl || !localParticipant) return;
 
-    const video = ipVideoRef.current;
+    const media = ipMediaRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!media || !canvas) return;
 
+    const isMjpeg = rtspUrl.includes('127.0.0.1') || rtspUrl.endsWith('.mjpg');
     const ctx = canvas.getContext('2d');
 
     let lastDrawTime = 0;
@@ -111,21 +112,23 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
       rafRef.current = requestAnimationFrame(drawFrame);
       const elapsed = timestamp - lastDrawTime;
 
-      // Throttle: Solo dibuja si ha pasado el tiempo necesario (20 FPS)
       if (elapsed > fpsInterval) {
         lastDrawTime = timestamp - (elapsed % fpsInterval);
-        if (video.readyState >= 2) {
-          canvas.width = video.videoWidth || 1280;
-          canvas.height = video.videoHeight || 720;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Para video, readyState >= 2. Para img, complete=true
+        const isReady = isMjpeg ? media.complete && media.naturalHeight !== 0 : media.readyState >= 2;
+        
+        if (isReady) {
+          canvas.width = (isMjpeg ? media.naturalWidth : media.videoWidth) || 1280;
+          canvas.height = (isMjpeg ? media.naturalHeight : media.videoHeight) || 720;
+          ctx.drawImage(media, 0, 0, canvas.width, canvas.height);
         }
       }
     };
 
     const startCanvasRelay = async () => {
       try {
-        // Capturar el stream del canvas y publicarlo en LiveKit
-        const canvasStream = canvas.captureStream(25); // 25 fps
+        const canvasStream = canvas.captureStream(25);
         const videoTrack = canvasStream.getVideoTracks()[0];
         const livekitTrack = new LocalVideoTrack(videoTrack, { name: 'ip-camera' });
         await localParticipant.publishTrack(livekitTrack);
@@ -133,21 +136,31 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
         setIpCamActive(true);
         rafRef.current = requestAnimationFrame(drawFrame);
       } catch (e) {
-        console.error('Error publicando cámara IP:', e);
+        console.error('Error publicando stream:', e);
         setIpCamError(true);
       }
     };
 
-    video.src = rtspUrl;
-    video.crossOrigin = 'anonymous';
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = true;
-    video.oncanplay = () => startCanvasRelay();
-    video.onerror = () => {
-      console.error('No se pudo cargar el stream de la cámara IP:', rtspUrl);
-      setIpCamError(true);
-    };
+    let hasStarted = false;
+
+    media.crossOrigin = 'anonymous';
+    if (isMjpeg) {
+      media.onload = () => {
+        if (!hasStarted) {
+          hasStarted = true;
+          startCanvasRelay();
+        }
+      };
+      media.onerror = () => setIpCamError(true);
+      media.src = rtspUrl;
+    } else {
+      media.autoplay = true;
+      media.playsInline = true;
+      media.muted = true;
+      media.oncanplay = () => startCanvasRelay();
+      media.onerror = () => setIpCamError(true);
+      media.src = rtspUrl;
+    }
 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -155,7 +168,7 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
         localParticipant.unpublishTrack(ipTrackRef.current);
         ipTrackRef.current = null;
       }
-      video.src = '';
+      media.src = '';
       setIpCamActive(false);
     };
   }, [rtspUrl, localParticipant]);
@@ -174,10 +187,14 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
     <div className="flex flex-col h-full bg-zinc-950">
       <RoomAudioRenderer />
 
-      {/* Elementos ocultos para el relay de cámara IP */}
+      {/* Elementos ocultos para el relay de video */}
       {rtspUrl && (
         <>
-          <video ref={ipVideoRef} style={{ display: 'none' }} />
+          {rtspUrl.includes('127.0.0.1') || rtspUrl.endsWith('.mjpg') ? (
+            <img ref={ipMediaRef} style={{ display: 'none' }} alt="mjpeg stream" />
+          ) : (
+            <video ref={ipMediaRef} style={{ display: 'none' }} />
+          )}
           <canvas ref={canvasRef} style={{ display: 'none' }} />
         </>
       )}
