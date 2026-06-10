@@ -68,7 +68,7 @@ function App() {
     }
   };
 
-  const handleConnect = async (name, ipCamUrl = '') => {
+  const handleConnect = async (name, ipCamUrl = '', isNativeUsbConnected = false) => {
     setIsConnecting(true);
     setError('');
     
@@ -78,6 +78,10 @@ function App() {
       if (ipCamUrl) {
         setRtspUrl(ipCamUrl);
         bestCam = null; // LiveView manejará el stream por canvas
+      } else if (isNativeUsbConnected) {
+        setRtspUrl('');
+        // Retornamos un flag para que LiveKitRoom sepa que el video vendrá del plugin nativo UVC
+        bestCam = { isNativeUvc: true }; 
       } else {
         setRtspUrl('');
         bestCam = await getBestCamera();
@@ -152,7 +156,7 @@ function App() {
         </div>
       ) : (
         <LiveKitRoom
-          video={!rtspUrl} // Si es cámara IP, desactivamos la captura estándar
+          video={!rtspUrl && !cameraConfig?.isNativeUvc} // Desactivamos la captura web si es IP o si es USB nativo
           audio={true}
           options={{
             videoCaptureDefaults: {

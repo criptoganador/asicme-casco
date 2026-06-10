@@ -12,7 +12,7 @@ const LoginView = ({ onConnect }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (agentName.trim().length > 0) {
-      onConnect(agentName.trim(), ipCamUrl.trim());
+      onConnect(agentName.trim(), ipCamUrl.trim(), isCameraConnected);
     }
   };
 
