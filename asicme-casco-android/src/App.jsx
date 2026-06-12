@@ -4,7 +4,6 @@ import '@livekit/components-styles';
 import LoginView from './components/LoginView';
 import LiveView from './components/LiveView';
 import SplashScreen from './components/SplashScreen';
-import ConsoleLogger from './components/ConsoleLogger';
 import { registerPlugin } from '@capacitor/core';
 
 const UvcCamera = registerPlugin('UvcCamera');
@@ -100,7 +99,6 @@ function App() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-zinc-950 font-sans">
-      <ConsoleLogger />
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
       {!token ? (
         <div className="relative h-full">

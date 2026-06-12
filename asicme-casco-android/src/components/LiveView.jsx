@@ -13,6 +13,7 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   const [gpsError, setGpsError] = useState(false);
   const [ipCamError, setIpCamError] = useState(false);
   const [ipCamActive, setIpCamActive] = useState(false);
+  const [showPreview, setShowPreview] = useState(false); // <--- Nuevo Estado
 
   // Refs para el modo cámara IP / MJPEG
   const ipMediaRef = useRef(null);
@@ -256,7 +257,8 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
       </div>
 
       {/* Main Video Area (Headless Mode) */}
-      <div className="flex-1 relative bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
+      {!showPreview && (
+        <div className="flex-1 relative bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
         
         {/* Radar/Indicador de Transmisión */}
         <div className="relative flex items-center justify-center w-40 h-40">
@@ -273,18 +275,31 @@ const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
             La cámara está enviando datos al Centro de Mando en segundo plano para ahorrar batería.
           </p>
         </div>
-
-
       </div>
+      )}
 
-      {/* Mantenemos el canvas oculto para la cámara IP en el DOM pero sin render visual intensivo */}
+      {/* Mantenemos el canvas oculto o visible según el estado showPreview */}
       {rtspUrl && (
-        <canvas ref={canvasRef} className="opacity-0 absolute pointer-events-none w-1 h-1" />
+        <canvas 
+          ref={canvasRef} 
+          className={showPreview ? "absolute inset-0 w-full h-full object-contain z-0 mt-16" : "opacity-0 absolute pointer-events-none w-1 h-1"} 
+        />
       )}
 
       {/* Footer / Controls */}
-      <div className="bg-zinc-900 p-6 pb-8 rounded-t-3xl border-t border-zinc-800 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <div className="flex justify-center items-center max-w-sm mx-auto">
+      <div className="bg-zinc-900 p-6 pb-8 rounded-t-3xl border-t border-zinc-800 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] relative">
+        <div className="flex justify-center items-center gap-8 max-w-sm mx-auto">
+          {/* Botón Preview (Ojo mágico) */}
+          {rtspUrl && (
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className={`w-14 h-14 flex items-center justify-center rounded-full transition-all ${showPreview ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+              title="Alinear Cámara"
+            >
+              <Camera className="w-6 h-6" />
+            </button>
+          )}
+
           {/* Botón Colgar */}
           <button
             onClick={handleHangUp}
