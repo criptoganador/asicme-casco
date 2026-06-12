@@ -35,6 +35,12 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
+        <!-- Servicio en Primer Plano (Foreground Service) -->
+        <service
+            android:name=".UvcForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
     </application>
 
     <!-- Permissions -->

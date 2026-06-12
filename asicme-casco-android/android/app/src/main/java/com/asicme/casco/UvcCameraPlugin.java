@@ -1,8 +1,10 @@
 package com.asicme.casco;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.hardware.usb.UsbDevice;
 import android.util.Log;
+import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -26,6 +28,11 @@ public class UvcCameraPlugin extends Plugin {
             @Override
             public void onPermissionGranted(UsbDevice device) {
                 mjpegServer.start();
+
+                // 3. Encender Escudo Protector (Foreground Service)
+                Intent serviceIntent = new Intent(getContext(), UvcForegroundService.class);
+                ContextCompat.startForegroundService(getContext(), serviceIntent);
+
                 if (savedCall != null) {
                     JSObject ret = new JSObject();
                     ret.put("streamUrl", "http://127.0.0.1:8080");
@@ -70,6 +77,11 @@ public class UvcCameraPlugin extends Plugin {
     protected void handleOnDestroy() {
         if (nativeDriver != null) nativeDriver.destruir();
         if (mjpegServer != null) mjpegServer.stop();
+        
+        // Apagar Escudo Protector
+        Intent serviceIntent = new Intent(getContext(), UvcForegroundService.class);
+        getContext().stopService(serviceIntent);
+        
         super.handleOnDestroy();
     }
 }
