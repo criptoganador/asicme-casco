@@ -49,6 +49,7 @@ public class MjpegServer implements Runnable {
                 String header = "HTTP/1.1 200 OK\r\n" +
                                 "Content-Type: multipart/x-mixed-replace; boundary=" + BOUNDARY + "\r\n" +
                                 "Connection: close\r\n" +
+                                "Access-Control-Allow-Origin: *\r\n" +
                                 "Cache-Control: no-cache\r\n" +
                                 "Pragma: no-cache\r\n\r\n";
                 
