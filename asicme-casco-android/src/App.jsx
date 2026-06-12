@@ -12,10 +12,17 @@ function App() {
   const [token, setToken] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
+  const [rtspUrl, setRtspUrl] = useState('');
 
-  const handleConnect = async (name) => {
+  const handleConnect = async (name, ipCamUrl = '') => {
     setIsConnecting(true);
     setError('');
+    
+    if (ipCamUrl) {
+      setRtspUrl(ipCamUrl);
+    } else {
+      setRtspUrl('');
+    }
     
     try {
       // Validar que la URL del servidor esté configurada
@@ -87,7 +94,8 @@ function App() {
         </div>
       ) : (
         <LiveKitRoom
-          video={true}
+          video={!rtspUrl}
+
           audio={true}
           options={{
             videoCaptureDefaults: {
@@ -111,7 +119,7 @@ function App() {
           className="h-full w-full"
           onDisconnected={handleDisconnect}
         >
-          <LiveView agentName={agentName} onDisconnect={handleDisconnect} />
+          <LiveView agentName={agentName} onDisconnect={handleDisconnect} rtspUrl={rtspUrl} />
         </LiveKitRoom>
       )}
     </div>

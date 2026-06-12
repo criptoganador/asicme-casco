@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Shield, Wifi, ChevronDown, ChevronUp } from 'lucide-react';
+import { registerPlugin } from '@capacitor/core';
+
+const UvcCamera = registerPlugin('UvcCamera');
 
 const LoginView = ({ onConnect }) => {
   const [agentName, setAgentName] = useState('');
@@ -9,7 +12,17 @@ const LoginView = ({ onConnect }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (agentName.trim().length > 0) {
-      onConnect(agentName.trim());
+      if (!ipCamUrl.trim()) {
+        try {
+          const res = await UvcCamera.startCamera();
+          onConnect(agentName.trim(), res.streamUrl, true);
+        } catch (error) {
+          console.warn("Cámara UVC no iniciada o no encontrada, usando cámara trasera:", error);
+          onConnect(agentName.trim(), '', false);
+        }
+      } else {
+        onConnect(agentName.trim(), ipCamUrl.trim(), false);
+      }
     }
   };
 

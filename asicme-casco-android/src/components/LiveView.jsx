@@ -1,16 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Camera, PhoneOff, Navigation } from 'lucide-react';
-import { useRoomContext, RoomAudioRenderer } from '@livekit/components-react';
+import { useState, useEffect, useRef } from 'react';
+import { Camera, PhoneOff, Navigation, Wifi } from 'lucide-react';
+import { useRoomContext, RoomAudioRenderer, useLocalParticipant } from '@livekit/components-react';
 import { Geolocation } from '@capacitor/geolocation';
+import { LocalVideoTrack } from 'livekit-client';
 
-const LiveView = ({ agentName, onDisconnect }) => {
+const LiveView = ({ agentName, onDisconnect, rtspUrl = '' }) => {
   const room = useRoomContext();
+  const { localParticipant } = useLocalParticipant();
   // El micrófono y la cámara son publicados automáticamente por <LiveKitRoom audio={true} video={true}>
 
   const [gpsActive, setGpsActive] = useState(false);
   const [gpsError, setGpsError] = useState(false);
+  const [ipCamError, setIpCamError] = useState(false);
+  const [ipCamActive, setIpCamActive] = useState(false);
 
-
+  // Refs para el modo cámara IP / MJPEG
+  const ipMediaRef = useRef(null);
+  const canvasRef = useRef(null);
+  const ipTrackRef = useRef(null);
+  const rafRef = useRef(null);
   // ─── Keep-alive en segundo plano ─────────────────────────────────────────────
   // Un AudioContext silencioso indica al sistema Android que la app está activa
   // y evita que congele el WebView. Truco usado por Spotify, Meet y WhatsApp.
@@ -85,6 +93,97 @@ const LiveView = ({ agentName, onDisconnect }) => {
     };
   }, [room]);
 
+  // ─── CÁMARA IP Y MJPEG (canvas relay) ────────────────────────────────────────
+  useEffect(() => {
+    if (!rtspUrl || !localParticipant) return;
+
+    const media = ipMediaRef.current;
+    const canvas = canvasRef.current;
+    if (!media || !canvas) return;
+
+    const isMjpeg = rtspUrl.includes('127.0.0.1') || rtspUrl.endsWith('.mjpg');
+    const ctx = canvas.getContext('2d');
+
+    let lastDrawTime = 0;
+    const fpsInterval = 1000 / 30; // 30 FPS máximo
+
+    let frameCount = 0;
+
+    const drawFrame = (timestamp) => {
+      rafRef.current = requestAnimationFrame(drawFrame);
+      const elapsed = timestamp - lastDrawTime;
+
+      if (elapsed > fpsInterval) {
+        lastDrawTime = timestamp - (elapsed % fpsInterval);
+        
+        // Para video, readyState >= 2. Para img, complete=true
+        const isReady = isMjpeg ? media.complete && media.naturalHeight !== 0 : media.readyState >= 2;
+        
+        if (isReady) {
+          canvas.width = (isMjpeg ? media.naturalWidth : media.videoWidth) || 1280;
+          canvas.height = (isMjpeg ? media.naturalHeight : media.videoHeight) || 720;
+          ctx.drawImage(media, 0, 0, canvas.width, canvas.height);
+          
+          frameCount++;
+          if (frameCount % 60 === 0) {
+            console.info(`✅ [Relay] Transmitiendo frames OK. Tamaño: ${canvas.width}x${canvas.height}`);
+          }
+        }
+      }
+    };
+
+    const startCanvasRelay = async () => {
+      try {
+        const canvasStream = canvas.captureStream(30);
+        const videoTrack = canvasStream.getVideoTracks()[0];
+        const livekitTrack = new LocalVideoTrack(videoTrack, { name: 'ip-camera' });
+        await localParticipant.publishTrack(livekitTrack);
+        ipTrackRef.current = livekitTrack;
+        setIpCamActive(true);
+        rafRef.current = requestAnimationFrame(drawFrame);
+      } catch (e) {
+        console.error('Error publicando stream:', e);
+        setIpCamError(true);
+      }
+    };
+
+    let hasStarted = false;
+
+    media.crossOrigin = 'anonymous';
+    if (isMjpeg) {
+      console.log('🔗 [Relay] Intentando conectar al stream MJPEG local:', rtspUrl);
+      media.onload = () => {
+        console.log('✅ [Relay] OnLoad disparado. El servidor MJPEG respondió con el primer frame.');
+        if (!hasStarted) {
+          hasStarted = true;
+          startCanvasRelay();
+        }
+      };
+      media.onerror = (e) => {
+        console.error('❌ [Relay] Error crítico conectando al servidor MJPEG.', e);
+        setIpCamError(true);
+      };
+      media.src = rtspUrl;
+    } else {
+      media.autoplay = true;
+      media.playsInline = true;
+      media.muted = true;
+      media.oncanplay = () => startCanvasRelay();
+      media.onerror = () => setIpCamError(true);
+      media.src = rtspUrl;
+    }
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (ipTrackRef.current) {
+        localParticipant.unpublishTrack(ipTrackRef.current);
+        ipTrackRef.current = null;
+      }
+      media.src = '';
+      setIpCamActive(false);
+    };
+  }, [rtspUrl, localParticipant]);
+
   // ─── Controles ───────────────────────────────────────────────────────────────
   // toggleMic y toggleCamera ahora son manejados automáticamente por useTrackToggle
 
@@ -100,6 +199,18 @@ const LiveView = ({ agentName, onDisconnect }) => {
       <RoomAudioRenderer />
 
 
+
+      {/* Elementos ocultos para el relay de video */}
+      {rtspUrl && (
+        <>
+          {rtspUrl.includes('127.0.0.1') || rtspUrl.endsWith('.mjpg') ? (
+            <img ref={ipMediaRef} style={{ display: 'none' }} alt="mjpeg stream" />
+          ) : (
+            <video ref={ipMediaRef} style={{ display: 'none' }} />
+          )}
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
+        </>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 bg-zinc-900 border-b border-zinc-800 z-10">
@@ -119,6 +230,20 @@ const LiveView = ({ agentName, onDisconnect }) => {
             <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-1.5 rounded-full border border-amber-500/20">
               <Navigation className="w-3 h-3 text-amber-500 opacity-50" />
               <span className="text-[10px] font-bold text-amber-500 tracking-wider">GPS ERROR</span>
+            </div>
+          )}
+
+          {/* Badge Cámara IP */}
+          {rtspUrl && ipCamActive && !ipCamError && (
+            <div className="flex items-center gap-1 bg-sky-500/10 px-2 py-1.5 rounded-full border border-sky-500/20">
+              <Wifi className="w-3 h-3 text-sky-400 animate-pulse" />
+              <span className="text-[10px] font-bold text-sky-400 tracking-wider">CAM UVC</span>
+            </div>
+          )}
+          {rtspUrl && ipCamError && (
+            <div className="flex items-center gap-1 bg-red-500/10 px-2 py-1.5 rounded-full border border-red-500/20">
+              <Wifi className="w-3 h-3 text-red-400 opacity-60" />
+              <span className="text-[10px] font-bold text-red-400 tracking-wider">UVC ERROR</span>
             </div>
           )}
 
@@ -151,6 +276,11 @@ const LiveView = ({ agentName, onDisconnect }) => {
 
 
       </div>
+
+      {/* Mantenemos el canvas oculto para la cámara IP en el DOM pero sin render visual intensivo */}
+      {rtspUrl && (
+        <canvas ref={canvasRef} className="opacity-0 absolute pointer-events-none w-1 h-1" />
+      )}
 
       {/* Footer / Controls */}
       <div className="bg-zinc-900 p-6 pb-8 rounded-t-3xl border-t border-zinc-800 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
