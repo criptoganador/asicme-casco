@@ -50,6 +50,7 @@ public class UvcNativeDriver {
         void onPermissionGranted(UsbDevice device);
         void onPermissionDenied(UsbDevice device);
         void onCameraNotFound();
+        void onCameraDisconnected();
     }
 
     // Fase 3: Streaming y Decodificación
@@ -168,15 +169,26 @@ public class UvcNativeDriver {
                                 if (listener != null) listener.onPermissionDenied(device);
                             }
                         }
+                    } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+                        UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                        if (device != null && targetDevice != null && device.getDeviceId() == targetDevice.getDeviceId()) {
+                            Log.w(TAG, "Cámara UVC desconectada físicamente (Cable extraído).");
+                            destruir(); // Detiene el streaming y cierra la conexión
+                            if (listener != null) listener.onCameraDisconnected();
+                        }
                     }
                 }
             };
             
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ACTION_USB_PERMISSION);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+
             // Compatibilidad con Android 14+ requiere especificar flags de exportación para receivers
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(permissionReceiver, new IntentFilter(ACTION_USB_PERMISSION), Context.RECEIVER_NOT_EXPORTED);
+                context.registerReceiver(permissionReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
-                context.registerReceiver(permissionReceiver, new IntentFilter(ACTION_USB_PERMISSION));
+                context.registerReceiver(permissionReceiver, filter);
             }
         }
     }

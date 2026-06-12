@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
 import LoginView from './components/LoginView';
 import LiveView from './components/LiveView';
 import SplashScreen from './components/SplashScreen';
 import ConsoleLogger from './components/ConsoleLogger';
+import { registerPlugin } from '@capacitor/core';
+
+const UvcCamera = registerPlugin('UvcCamera');
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -13,6 +16,26 @@ function App() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
   const [rtspUrl, setRtspUrl] = useState('');
+
+  // Efecto para escuchar la desconexión / conexión en caliente
+  useEffect(() => {
+    const connectedListener = UvcCamera.addListener('onUsbCameraConnected', (data) => {
+      console.log('🔗 [Plug & Play] Cámara UVC detectada, cambiando transmisión...');
+      if (data && data.streamUrl) {
+        setRtspUrl(data.streamUrl);
+      }
+    });
+
+    const disconnectedListener = UvcCamera.addListener('onUsbCameraDisconnected', () => {
+      console.warn('🔌 [Plug & Play] Cámara UVC desconectada, regresando a cámara trasera...');
+      setRtspUrl(''); // Esto activa mágicamente la cámara del teléfono de nuevo
+    });
+
+    return () => {
+      connectedListener.then(l => l.remove());
+      disconnectedListener.then(l => l.remove());
+    };
+  }, []);
 
   const handleConnect = async (name, ipCamUrl = '') => {
     setIsConnecting(true);

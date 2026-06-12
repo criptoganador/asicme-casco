@@ -33,9 +33,12 @@ public class UvcCameraPlugin extends Plugin {
                 Intent serviceIntent = new Intent(getContext(), UvcForegroundService.class);
                 ContextCompat.startForegroundService(getContext(), serviceIntent);
 
+                // 4. Avisar a React
+                JSObject ret = new JSObject();
+                ret.put("streamUrl", "http://127.0.0.1:8080");
+                notifyListeners("onUsbCameraConnected", ret);
+
                 if (savedCall != null) {
-                    JSObject ret = new JSObject();
-                    ret.put("streamUrl", "http://127.0.0.1:8080");
                     savedCall.resolve(ret);
                     savedCall = null;
                 }
@@ -55,6 +58,17 @@ public class UvcCameraPlugin extends Plugin {
                     savedCall.reject("No se encontró ninguna cámara UVC.");
                     savedCall = null;
                 }
+            }
+            @Override
+            public void onCameraDisconnected() {
+                // Apagar el servidor y el escudo de inmediato
+                mjpegServer.stop();
+                Intent serviceIntent = new Intent(getContext(), UvcForegroundService.class);
+                getContext().stopService(serviceIntent);
+
+                // Avisar a React que el cable fue extraído
+                JSObject ret = new JSObject();
+                notifyListeners("onUsbCameraDisconnected", ret);
             }
         });
 
