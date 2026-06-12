@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Camera } from '@capacitor/camera';
 import LoginView from './components/LoginView';
 import LiveView from './components/LiveView';
 import SplashScreen from './components/SplashScreen';
+import ConsoleLogger from './components/ConsoleLogger';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -12,81 +12,12 @@ function App() {
   const [token, setToken] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
-  const [cameraConfig, setCameraConfig] = useState(undefined);
-  const [rtspUrl, setRtspUrl] = useState('');
 
-  const getBestCamera = async () => {
-    try {
-      // 0. Asegurar el permiso base de Android antes de interactuar con el hardware
-      await Camera.requestPermissions({ permissions: ['camera'] });
-
-      // 1. Pedir permiso web para obtener los nombres reales de las cámaras
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      
-      // 2. Enumerar todas las cámaras
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      
-      // 3. Buscar cámara externa (USB/UVC/HDMI capturador)
-      const EXTERNAL_KEYWORDS = [
-        'usb', 'uvc', 'external',
-        'capture', 'hdmi', 'elgato', 'magewell', 'avermedia',
-        'cam link', 'camlink', 'video capture', 'capture card',
-        'obs virtual', 'manycam', 'droidcam'
-      ];
-      const externalCam = videoDevices.find(d =>
-        EXTERNAL_KEYWORDS.some(kw => d.label.toLowerCase().includes(kw))
-      );
-
-      // Apagar la cámara temporal usada para el permiso
-      stream.getTracks().forEach(track => track.stop());
-
-      if (externalCam) {
-        const useUSB = window.confirm('Se ha detectado una cámara externa USB/OTG conectada.\n\n¿Deseas usar esta cámara para la transmisión?');
-        if (useUSB) {
-          console.log('Usando cámara externa:', externalCam.label);
-          return { deviceId: externalCam.deviceId };
-        } else {
-          console.log('Usuario rechazó cámara externa, usando trasera');
-          return { facingMode: 'environment' };
-        }
-      } else {
-        const usePhone = window.confirm('No se detectó ninguna cámara USB/OTG conectada.\n\n¿Deseas usar la cámara trasera del teléfono?');
-        if (usePhone) {
-          console.log('Usando cámara trasera por defecto');
-          return { facingMode: 'environment' };
-        } else {
-          throw new Error('USER_CANCELLED');
-        }
-      }
-    } catch (e) {
-      if (e.message === 'USER_CANCELLED') {
-        throw new Error('Conexión cancelada. No se seleccionó ninguna cámara.', { cause: e });
-      }
-      console.warn('Error detectando cámaras, usando trasera por defecto:', e);
-      return { facingMode: 'environment' };
-    }
-  };
-
-  const handleConnect = async (name, ipCamUrl = '', isNativeUsbConnected = false) => {
+  const handleConnect = async (name) => {
     setIsConnecting(true);
     setError('');
     
     try {
-      // Si el usuario ingresó una URL de cámara IP, la usamos directamente
-      let bestCam;
-      if (ipCamUrl) {
-        setRtspUrl(ipCamUrl);
-        bestCam = null; // LiveView manejará el stream por canvas
-      } else if (isNativeUsbConnected) {
-        setRtspUrl('');
-        // Retornamos un flag para que LiveKitRoom sepa que el video vendrá del plugin nativo UVC
-        bestCam = { isNativeUvc: true }; 
-      } else {
-        setRtspUrl('');
-        bestCam = await getBestCamera();
-      }
-
       // Validar que la URL del servidor esté configurada
       const apiUrl = import.meta.env.VITE_API_URL;
       if (!apiUrl) {
@@ -107,7 +38,6 @@ function App() {
       const data = await response.json();
       
       if (data.token) {
-        setCameraConfig(bestCam);
         setToken(data.token);
         setAgentName(name);
 
@@ -136,6 +66,7 @@ function App() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-zinc-950 font-sans">
+      <ConsoleLogger />
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
       {!token ? (
         <div className="relative h-full">
@@ -156,11 +87,11 @@ function App() {
         </div>
       ) : (
         <LiveKitRoom
-          video={!rtspUrl && !cameraConfig?.isNativeUvc} // Desactivamos la captura web si es IP o si es USB nativo
+          video={true}
           audio={true}
           options={{
             videoCaptureDefaults: {
-              ...(cameraConfig || { facingMode: 'environment' }),
+              facingMode: 'environment',
               resolution: { width: 1280, height: 720 }, // Forzar 720p máximo
               frameRate: { max: 20 } // Limitar a 20 FPS para reducir calentamiento
             },
@@ -180,7 +111,7 @@ function App() {
           className="h-full w-full"
           onDisconnected={handleDisconnect}
         >
-          <LiveView agentName={agentName} onDisconnect={handleDisconnect} rtspUrl={rtspUrl} />
+          <LiveView agentName={agentName} onDisconnect={handleDisconnect} />
         </LiveKitRoom>
       )}
     </div>

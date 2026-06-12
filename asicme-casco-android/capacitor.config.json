@@ -11,5 +11,8 @@
       "splashFullScreen": true,
       "splashImmersive": true
     }
+  },
+  "server": {
+    "cleartext": true
   }
 }
