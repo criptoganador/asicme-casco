@@ -20,9 +20,13 @@ function App() {
   // Efecto para escuchar la desconexión / conexión en caliente
   useEffect(() => {
     const connectedListener = UvcCamera.addListener('onUsbCameraConnected', (data) => {
-      console.log('🔗 [Plug & Play] Cámara UVC detectada, cambiando transmisión...');
+      console.log('🔗 [Plug & Play] Cámara UVC detectada. Esperando a que el hardware inicialice...');
       if (data && data.streamUrl) {
-        setRtspUrl(data.streamUrl);
+        // Solución a la Race Condition: Esperar 1.5s a que el servidor MJPEG local esté sirviendo frames
+        setTimeout(() => {
+          console.log('🔗 [Plug & Play] Cambiando transmisión a UVC...');
+          setRtspUrl(data.streamUrl);
+        }, 1500);
       }
     });
 
