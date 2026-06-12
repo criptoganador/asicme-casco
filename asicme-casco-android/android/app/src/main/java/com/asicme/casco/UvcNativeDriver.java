@@ -316,6 +316,13 @@ public class UvcNativeDriver {
             // 4. Utiliza un ByteArrayOutputStream para ir acumulando los bytes de imagen.
             ByteArrayOutputStream frameBuffer = new ByteArrayOutputStream(1024 * 50); // Pre-alocado a 50KB
 
+            // ¡El Eslabón Perdido! Apretón de manos UVC
+            if (!negociarFormatoUVC()) {
+                Log.e(TAG, "Abortando streaming: Falló la negociación UVC.");
+                isStreaming.set(false);
+                return;
+            }
+
             try {
                 while (isStreaming.get() && connection != null) {
                     // 2. Lectura en Bruto (bulkTransfer)
@@ -372,5 +379,44 @@ public class UvcNativeDriver {
 
         workerThread.setName("UVC-Stream-Worker");
         workerThread.start();
+    }
+
+    /**
+     * El "Apretón de Manos" UVC (Probe & Commit).
+     * Obliga a la cámara a encender su lente y comenzar a enviar datos por el Endpoint de VideoStreaming.
+     */
+    private boolean negociarFormatoUVC() {
+        Log.d(TAG, "Iniciando Apretón de Manos UVC (Probe & Commit)...");
+        
+        // El control de streaming se manda al ID de la interfaz de VideoStreaming
+        int vsInterfaceId = streamInterface.getId();
+        
+        // Bloque de 26 bytes para UVC 1.1
+        byte[] probeData = new byte[26];
+        
+        // 1. Preguntarle a la cámara cuál es su formato/resolución por defecto (GET_CUR sobre PROBE)
+        int getCurReqType = 0xA1; // 10100001b (DIR_IN | TYPE_CLASS | RECIPIENT_INTERFACE)
+        int getCurReq = 0x81;     // GET_CUR
+        int probeValue = 0x0100;  // Selector 1 (VS_PROBE_CONTROL)
+        
+        int len = connection.controlTransfer(getCurReqType, getCurReq, probeValue, vsInterfaceId, probeData, probeData.length, 1000);
+        if (len < 0) {
+            Log.e(TAG, "UVC GET_CUR (Probe) falló. La cámara no respondió a la consulta de formato.");
+            return false;
+        }
+
+        // 2. Ordenarle a la cámara que aplique ese formato y encienda el flujo (SET_CUR sobre COMMIT)
+        int setCurReqType = 0x21; // 00100001b (DIR_OUT | TYPE_CLASS | RECIPIENT_INTERFACE)
+        int setCurReq = 0x01;     // SET_CUR
+        int commitValue = 0x0200; // Selector 2 (VS_COMMIT_CONTROL)
+        
+        int commitLen = connection.controlTransfer(setCurReqType, setCurReq, commitValue, vsInterfaceId, probeData, probeData.length, 1000);
+        if (commitLen < 0) {
+            Log.e(TAG, "UVC SET_CUR (Commit) falló. La cámara rechazó el encendido.");
+            return false;
+        }
+        
+        Log.d(TAG, "Apretón de Manos UVC exitoso. La cámara acaba de encender el lente.");
+        return true;
     }
 }
