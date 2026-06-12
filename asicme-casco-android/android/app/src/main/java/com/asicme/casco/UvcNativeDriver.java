@@ -313,8 +313,20 @@ public class UvcNativeDriver {
             int maxPacketSize = videoEndpoint.getMaxPacketSize();
             byte[] buffer = new byte[maxPacketSize];
             
-            // 4. Utiliza un ByteArrayOutputStream para ir acumulando los bytes de imagen.
-            ByteArrayOutputStream frameBuffer = new ByteArrayOutputStream(1024 * 50); // Pre-alocado a 50KB
+            // 4. Utiliza un buffer crudo en lugar de ByteArrayOutputStream para EVITAR allocations
+            byte[] jpegBuffer = new byte[1024 * 512]; // Medio megabyte es suficiente para 720p MJPEG
+            int jpegLength = 0;
+
+            // Pool de Bitmaps (El asesino del Garbage Collector)
+            Bitmap[] bitmapPool = new Bitmap[3];
+            for (int i = 0; i < 3; i++) {
+                bitmapPool[i] = Bitmap.createBitmap(1280, 720, Bitmap.Config.ARGB_8888);
+            }
+            int poolIndex = 0;
+
+            BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+            bitmapOptions.inMutable = true; // Vital para poder reutilizar la memoria
+            bitmapOptions.inSampleSize = 1;
 
             // ¡El Eslabón Perdido! Apretón de manos UVC
             if (!negociarFormatoUVC()) {
@@ -342,26 +354,41 @@ public class UvcNativeDriver {
                             // Bandera EOF (End of Frame) es el bit 1
                             boolean isEof = (headerBitfield & 0x02) != 0;
 
-                            // 4. Reensamblaje del Fotograma (MJPEG)
-                            // Ignora los primeros bytes (headerLength) y copia el "Payload"
+                            // 4. Reensamblaje del Fotograma (MJPEG) SIN crear nuevos arrays
                             int payloadLength = bytesRead - headerLength;
-                            if (payloadLength > 0) {
-                                frameBuffer.write(buffer, headerLength, payloadLength);
+                            if (payloadLength > 0 && (jpegLength + payloadLength) < jpegBuffer.length) {
+                                System.arraycopy(buffer, headerLength, jpegBuffer, jpegLength, payloadLength);
+                                jpegLength += payloadLength;
                             }
 
                             // 5. Decodificación a Bitmap al detectar EOF
                             if (isEof) {
-                                byte[] jpegBytes = frameBuffer.toByteArray();
-                                frameBuffer.reset(); // Limpiar el acumulador para la siguiente foto
+                                if (jpegLength > 0 && frameListener != null) {
+                                    // Usar el Bitmap del pool para sobreescribir sus píxeles
+                                    bitmapOptions.inBitmap = bitmapPool[poolIndex];
+                                    Bitmap bitmap = null;
+                                    
+                                    try {
+                                        bitmap = BitmapFactory.decodeByteArray(jpegBuffer, 0, jpegLength, bitmapOptions);
+                                    } catch (IllegalArgumentException e) {
+                                        // Si la cámara manda una resolución distinta a 1280x720, el inBitmap falla.
+                                        // Creamos uno nuevo dinámicamente y lo metemos al pool.
+                                        bitmapOptions.inBitmap = null;
+                                        bitmap = BitmapFactory.decodeByteArray(jpegBuffer, 0, jpegLength, bitmapOptions);
+                                        if (bitmap != null) {
+                                            bitmapPool[poolIndex] = bitmap;
+                                        }
+                                    }
 
-                                if (jpegBytes.length > 0 && frameListener != null) {
-                                    Bitmap bitmap = BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.length);
                                     if (bitmap != null) {
                                         frameListener.onFrame(bitmap);
+                                        // Rotar el pool
+                                        poolIndex = (poolIndex + 1) % 3;
                                     } else {
                                         Log.w(TAG, "Fallo al decodificar Bitmap (fotograma corrupto o fragmentado).");
                                     }
                                 }
+                                jpegLength = 0; // Limpiar acumulador lógico para la siguiente foto
                             }
                         }
                     }
@@ -370,9 +397,6 @@ public class UvcNativeDriver {
                 Log.e(TAG, "Error crítico en el hilo de lectura de video: ", e);
             } finally {
                 isStreaming.set(false);
-                try {
-                    frameBuffer.close();
-                } catch (Exception ignored) {}
                 Log.d(TAG, "Hilo de lectura de video terminado de forma segura.");
             }
         });

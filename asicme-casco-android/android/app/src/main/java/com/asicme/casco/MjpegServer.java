@@ -69,20 +69,23 @@ public class MjpegServer implements Runnable {
         }
     }
 
+    private final java.io.ByteArrayOutputStream jpegStream = new java.io.ByteArrayOutputStream(1024 * 256);
+
     public synchronized void pushFrame(Bitmap frame) {
         if (outputStream == null || clientSocket == null || clientSocket.isClosed()) return;
 
         try {
-            java.io.ByteArrayOutputStream jpegStream = new java.io.ByteArrayOutputStream();
+            jpegStream.reset();
             frame.compress(Bitmap.CompressFormat.JPEG, 60, jpegStream); // 60% quality para velocidad
-            byte[] jpegBytes = jpegStream.toByteArray();
+            
+            int length = jpegStream.size();
 
             String frameHeader = "\r\n" + BOUNDARY + "\r\n" +
                                  "Content-Type: image/jpeg\r\n" +
-                                 "Content-Length: " + jpegBytes.length + "\r\n\r\n";
+                                 "Content-Length: " + length + "\r\n\r\n";
 
             outputStream.write(frameHeader.getBytes());
-            outputStream.write(jpegBytes);
+            jpegStream.writeTo(outputStream); // Escribe directo sin crear nuevos arrays
             outputStream.flush();
         } catch (Exception e) {
             Log.e(TAG, "Error pushing frame, client probably disconnected.", e);
