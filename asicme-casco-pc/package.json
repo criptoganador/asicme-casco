@@ -7,10 +7,10 @@
   "description": "Centro de Mando - Sistema de Vigilancia AsicMe Casco",
   "main": "main.js",
   "scripts": {
-    "dev:web": "vite",
+    "dev": "vite --port 5173 --open",
+    "dev:electron": "concurrently \"vite --port 5173\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build",
     "electron": "electron .",
-    "dev": "concurrently \"vite --port 5173\" \"wait-on http://localhost:5173 && electron .\"",
     "dist": "npm run build && electron-builder --win",
     "lint": "eslint .",
     "preview": "vite preview"

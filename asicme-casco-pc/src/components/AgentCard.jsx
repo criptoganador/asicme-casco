@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Camera, Volume2, VolumeX, Maximize2, Minimize2, MapPin, Layers, PictureInPicture2, Map as MapIcon, LocateFixed } from 'lucide-react';
 import { useDataChannel, VideoTrack, AudioTrack } from '@livekit/components-react';
 import { MapContainer, TileLayer, Marker as LeafletMarker, Popup as LeafletPopup, useMap } from 'react-leaflet';
@@ -223,8 +223,34 @@ const AgentCard = ({ participant, isExpanded }) => {
     }
   });
 
-  const videoTrackRef = Array.from(participant.videoTrackPublications.values()).find(p => p.source === 'camera');
-  const audioTrackRef = Array.from(participant.audioTrackPublications.values()).find(p => p.source === 'microphone');
+  // ─── Escuchar eventos de tracks del participante para re-renderizar reactivamente ───
+  const [, setTrackUpdate] = useState(0);
+  useEffect(() => {
+    const handleUpdate = () => setTrackUpdate(c => c + 1);
+    participant.on('trackPublished', handleUpdate);
+    participant.on('trackSubscribed', handleUpdate);
+    participant.on('trackUnpublished', handleUpdate);
+    participant.on('trackUnsubscribed', handleUpdate);
+    participant.on('trackMuted', handleUpdate);
+    participant.on('trackUnmuted', handleUpdate);
+    return () => {
+      participant.off('trackPublished', handleUpdate);
+      participant.off('trackSubscribed', handleUpdate);
+      participant.off('trackUnpublished', handleUpdate);
+      participant.off('trackUnsubscribed', handleUpdate);
+      participant.off('trackMuted', handleUpdate);
+      participant.off('trackUnmuted', handleUpdate);
+    };
+  }, [participant]);
+
+  // Buscar publicación de video activa: primero cámara, o cualquier track de video disponible
+  const videoTrackRef = Array.from(participant.videoTrackPublications.values()).find(p => p.source === 'camera' && p.track)
+    || Array.from(participant.videoTrackPublications.values()).find(p => p.track)
+    || Array.from(participant.videoTrackPublications.values())[0];
+
+  const audioTrackRef = Array.from(participant.audioTrackPublications.values()).find(p => p.source === 'microphone' && p.track)
+    || Array.from(participant.audioTrackPublications.values()).find(p => p.track)
+    || Array.from(participant.audioTrackPublications.values())[0];
 
   // Fallback GPS global
   const fallbackGps = typeof window !== 'undefined' ? window.__LAST_GPS__ : null;
@@ -242,12 +268,12 @@ const AgentCard = ({ participant, isExpanded }) => {
     }
   }
 
-  // ─── Ventana flotante del VIDEO ─────────────────────────────────────────
-  const VideoContent = (
+  // ─── Panel de VIDEO como componente (evita el error removeChild al usarlo en dos sitios) ──
+  const VideoPanel = () => (
     <div className="relative w-full h-full bg-black">
       {videoTrackRef ? (
         <VideoTrack
-          trackRef={{ participant, source: 'camera', publication: videoTrackRef }}
+          trackRef={{ participant, source: videoTrackRef.source || 'camera', publication: videoTrackRef }}
           className="absolute inset-0 w-full h-full object-cover"
         />
       ) : (
@@ -276,7 +302,7 @@ const AgentCard = ({ participant, isExpanded }) => {
           initialX={120}
           initialY={100}
         >
-          {VideoContent}
+          <VideoPanel />
         </FloatingWindow>
       )}
 
@@ -343,7 +369,7 @@ const AgentCard = ({ participant, isExpanded }) => {
                   Cerrar flotante
                 </button>
               </div>
-            ) : VideoContent}
+            ) : <VideoPanel />}
 
             {/* ── Barra de controles inferior estilo YouTube ── */}
             <div className="absolute inset-x-0 bottom-0 px-4 pb-3 pt-8 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">

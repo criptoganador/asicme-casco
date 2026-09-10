@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LiveKitRoom, useDataChannel, useLocalParticipant } from '@livekit/components-react';
+import { LiveKitRoom, useDataChannel, useLocalParticipant, StartAudio, RoomAudioRenderer } from '@livekit/components-react';
 import { LayoutGrid, Map as MapIcon } from 'lucide-react';
 import '@livekit/components-styles';
 import Sidebar from './components/Sidebar';
@@ -152,6 +152,11 @@ function App() {
           serverUrl={import.meta.env.VITE_LIVEKIT_URL}
           style={{ '--lk-bg': 'transparent' }}
         >
+          <RoomAudioRenderer />
+          <StartAudio 
+            label="🔊 Haz clic aquí para activar audio" 
+            className="fixed bottom-4 right-4 z-50 bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded-lg shadow-lg cursor-pointer transition-transform hover:scale-105"
+          />
           <MicrophoneController />
           <MainLayout 
             selectedAgentId={selectedAgentId}
