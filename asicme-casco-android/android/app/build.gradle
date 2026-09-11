@@ -43,6 +43,8 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // Libreria UVC nativa (org.uvccamera:lib:0.0.13)
+    implementation 'org.uvccamera:lib:0.0.13'
 }
 
 apply from: 'capacitor.build.gradle'

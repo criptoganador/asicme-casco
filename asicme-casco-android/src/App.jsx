@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
 import LoginView from './components/LoginView';
@@ -15,40 +15,133 @@ function App() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
   const [rtspUrl, setRtspUrl] = useState('');
+  const [usbDeviceInfo, setUsbDeviceInfo] = useState(null); // Info del dispositivo USB conectado
+  // usbCamPending: URL detectada antes de login, para aplicarla después
+  const [sensorStatus, setSensorStatus] = useState({
+    status: 'DESCONECTADO',
+    fps: 0,
+    frames: 0,
+    message: ''
+  });
 
-  // Efecto para escuchar la desconexión / conexión en caliente
+  const usbCamPendingRef = useRef(null);
+
+  const handleForzarEncendido = async () => {
+    console.log('⚡ [ForzarEncendido] Solicitando forzar encendido del sensor USB...');
+    try {
+      setSensorStatus(prev => ({ ...prev, status: 'ENCENDIENDO', message: 'Re-activando sensor...' }));
+      await UvcCamera.forzarEncendido();
+    } catch (e) {
+      console.warn('Error al forzar encendido:', e);
+    }
+  };
+
+  // Efecto para escuchar la desconexión / conexión en caliente de la cámara USB
   useEffect(() => {
     const connectedListener = UvcCamera.addListener('onUsbCameraConnected', (data) => {
-      console.log('🔗 [Plug & Play] Cámara UVC detectada. Esperando a que el hardware inicialice...');
+      console.log('🔗 [Plug & Play] Cámara UVC detectada por evento en caliente.');
       if (data && data.streamUrl) {
-        // Solución a la Race Condition: Esperar 1.5s a que el servidor MJPEG local esté sirviendo frames
-        setTimeout(() => {
-          console.log('🔗 [Plug & Play] Cambiando transmisión a UVC...');
-          setRtspUrl(data.streamUrl);
-        }, 1500);
+        // Guardar información del dispositivo
+        setUsbDeviceInfo({
+          type:         data.deviceType     || 'Dispositivo de video USB',
+          brand:        data.deviceBrand    || 'Desconocido',
+          product:      data.deviceProduct  || '',
+          manufacturer: data.manufacturer   || '',
+          vidPid:       data.vidPid         || '',
+          codec:        data.codec          || 'Detectando...',
+          transferType: data.transferType   || '?',
+        });
+        setSensorStatus({ status: 'ENCENDIENDO', fps: 0, frames: 0, message: 'Sensor detectado, activando...' });
+        if (token) {
+          // Ya está conectado: aplicar el stream con delay para que el servidor tenga frames
+          setTimeout(() => {
+            console.log('🔗 [Plug & Play] Activando stream UVC en caliente...');
+            setRtspUrl(data.streamUrl);
+          }, 2000);
+        } else {
+          // Aún no conectado: guardar pendiente para aplicar después del login
+          usbCamPendingRef.current = data.streamUrl;
+          console.log('🔗 [Plug & Play] Stream USB guardado como pendiente, esperando login...');
+        }
       }
     });
 
     const disconnectedListener = UvcCamera.addListener('onUsbCameraDisconnected', () => {
-      console.warn('🔌 [Plug & Play] Cámara UVC desconectada, regresando a cámara trasera...');
-      setRtspUrl(''); // Esto activa mágicamente la cámara del teléfono de nuevo
+      console.warn('🔌 [Plug & Play] Cámara UVC desconectada, regresando a cámara del teléfono...');
+      usbCamPendingRef.current = null;
+      setUsbDeviceInfo(null);
+      setSensorStatus({ status: 'DESCONECTADO', fps: 0, frames: 0, message: '' });
+      setRtspUrl('');
+    });
+
+    const infoUpdatedListener = UvcCamera.addListener('onUsbCameraInfoUpdated', (data) => {
+      console.log('ℹ️ [DeviceInfo] Códec y formato UVC actualizados en tiempo real:', data);
+      if (data) {
+        setUsbDeviceInfo(prev => ({
+          type:         data.deviceType     || prev?.type || 'Dispositivo de video USB',
+          brand:        data.deviceBrand    || prev?.brand || 'Desconocido',
+          product:      data.deviceProduct  || prev?.product || '',
+          manufacturer: data.manufacturer   || prev?.manufacturer || '',
+          vidPid:       data.vidPid         || prev?.vidPid || '',
+          codec:        data.codec          || prev?.codec || 'Detectando...',
+          transferType: data.transferType   || prev?.transferType || '?',
+        }));
+      }
+    });
+
+    const sensorStatusListener = UvcCamera.addListener('onUsbSensorStatus', (data) => {
+      console.log('📡 [SensorStatus] Estado del sensor:', data);
+      if (data) {
+        setSensorStatus({
+          status: data.status || 'DESCONECTADO',
+          fps: data.fps || 0,
+          frames: data.frames || 0,
+          message: data.message || ''
+        });
+      }
     });
 
     return () => {
       connectedListener.then(l => l.remove());
       disconnectedListener.then(l => l.remove());
+      infoUpdatedListener.then(l => l.remove());
+      sensorStatusListener.then(l => l.remove());
     };
-  }, []);
+  }, [token]);
 
-  const handleConnect = async (name, ipCamUrl = '') => {
+  const handleConnect = async (name, ipCamUrl = '', deviceInfo = null) => {
     setIsConnecting(true);
     setError('');
     
-    if (ipCamUrl) {
-      setRtspUrl(ipCamUrl);
-    } else {
-      setRtspUrl('');
+    // Si viene con info de dispositivo USB desde startCamera(), guardarlo
+    if (deviceInfo) {
+      setUsbDeviceInfo(deviceInfo);
     }
+
+    // ipCamUrl puede ser:
+    //   - URL de cámara IP manual del usuario
+    //   - URL del servidor MJPEG local USB (http://127.0.0.1:8080)
+    //   - vacío: NO usamos cámara del teléfono, esperamos la USB
+    if (ipCamUrl && !ipCamUrl.startsWith('http://127.0.0.1')) {
+      // Cámara IP externa — sin delay
+      setRtspUrl(ipCamUrl);
+    } else if (ipCamUrl && ipCamUrl.startsWith('http://127.0.0.1')) {
+      // Cámara USB — pequeño delay para que el servidor MJPEG esté listo
+      setTimeout(() => {
+        console.log('📷 [USB] Activando stream de cámara USB:', ipCamUrl);
+        setRtspUrl(ipCamUrl);
+      }, 500);
+    } else if (usbCamPendingRef.current) {
+      // Si hay una cámara USB detectada antes del login, aplicar ahora
+      const pendingUrl = usbCamPendingRef.current;
+      usbCamPendingRef.current = null;
+      setTimeout(() => {
+        console.log('📷 [USB] Activando stream USB pendiente:', pendingUrl);
+        setRtspUrl(pendingUrl);
+      }, 500);
+    }
+    // NOTA: Si no hay cámara USB, NO activamos la cámara del teléfono.
+    // El agente deberá conectar la cámara USB por OTG.
     
     try {
       // Validar que la URL del servidor esté configurada
@@ -119,24 +212,19 @@ function App() {
         </div>
       ) : (
         <LiveKitRoom
-          video={!rtspUrl}
+          video={false}
 
           audio={true}
           options={{
-            videoCaptureDefaults: {
-              facingMode: 'environment',
-              resolution: { width: 1280, height: 720 }, // Forzar 720p máximo
-              frameRate: { max: 20 } // Limitar a 20 FPS para reducir calentamiento
-            },
             audioCaptureDefaults: {
               noiseSuppression: true,
               echoCancellation: true,
               autoGainControl: true,
             },
             publishDefaults: {
-              videoSimulcast: false, // ¡Vital para móviles! Desactiva las 3 capas de codificación
-              videoCodec: 'vp8', // Usa codec con soporte de hardware común
-              videoBitrate: 800000 // Límite de 800 kbps
+              videoSimulcast: false,
+              videoCodec: 'vp8',
+              videoBitrate: 800000
             }
           }}
           token={token}
@@ -144,7 +232,14 @@ function App() {
           className="h-full w-full"
           onDisconnected={handleDisconnect}
         >
-          <LiveView agentName={agentName} onDisconnect={handleDisconnect} rtspUrl={rtspUrl} />
+          <LiveView
+            agentName={agentName}
+            onDisconnect={handleDisconnect}
+            rtspUrl={rtspUrl}
+            usbDeviceInfo={usbDeviceInfo}
+            sensorStatus={sensorStatus}
+            onForzarEncendido={handleForzarEncendido}
+          />
         </LiveKitRoom>
       )}
     </div>

@@ -56,10 +56,10 @@ const TacticalMap = ({ displayCoords, is3DMode, setIs3DMode }) => {
         >
           <LeafletPopup>
             <div className="text-center font-mono text-xs">
-              <b>GPS Agente</b><br/>
-              Lat: {displayCoords.latitude.toFixed(5)}<br/>
-              Lng: {displayCoords.longitude.toFixed(5)}<br/>
-              {displayCoords.heading != null ? `Dir: ${displayCoords.heading}°` : ''}
+              <p className="font-bold">GPS Agente</p>
+              <p>Lat: {displayCoords.latitude.toFixed(5)}</p>
+              <p>Lng: {displayCoords.longitude.toFixed(5)}</p>
+              {displayCoords.heading != null && <p>Dir: {displayCoords.heading}°</p>}
             </div>
           </LeafletPopup>
         </LeafletMarker>
@@ -188,6 +188,30 @@ function RecenterHelper({ center }) {
 }
 
 
+// Sub-componente del panel de video con identidad fija (evita desmonte innecesario en cada re-render)
+function VideoPanel({ participant, videoTrackRef }) {
+  return (
+    <div className="relative w-full h-full bg-black">
+      {videoTrackRef ? (
+        <VideoTrack
+          trackRef={{ participant, source: videoTrackRef.source || 'camera', publication: videoTrackRef }}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+          <Camera className="w-14 h-14 mb-3 opacity-50" />
+          <p className="font-mono text-sm">Esperando feed de video...</p>
+        </div>
+      )}
+      {/* Badge LIVE */}
+      <span className="absolute top-3 left-3 inline-flex items-center gap-2 rounded-full bg-red-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white shadow-lg shadow-red-500/30">
+        <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+        LIVE
+      </span>
+    </div>
+  );
+}
+
 const AgentCard = ({ participant, isExpanded }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [localExpanded, setLocalExpanded] = useState(false);
@@ -268,28 +292,6 @@ const AgentCard = ({ participant, isExpanded }) => {
     }
   }
 
-  // ─── Panel de VIDEO como componente (evita el error removeChild al usarlo en dos sitios) ──
-  const VideoPanel = () => (
-    <div className="relative w-full h-full bg-black">
-      {videoTrackRef ? (
-        <VideoTrack
-          trackRef={{ participant, source: videoTrackRef.source || 'camera', publication: videoTrackRef }}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-          <Camera className="w-14 h-14 mb-3 opacity-50" />
-          <p className="font-mono text-sm">Esperando feed de video...</p>
-        </div>
-      )}
-      {/* Badge LIVE */}
-      <span className="absolute top-3 left-3 inline-flex items-center gap-2 rounded-full bg-red-500 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white shadow-lg shadow-red-500/30">
-        <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-        LIVE
-      </span>
-    </div>
-  );
-
   return (
     <>
       {/* ── Ventana flotante VIDEO ── */}
@@ -302,7 +304,7 @@ const AgentCard = ({ participant, isExpanded }) => {
           initialX={120}
           initialY={100}
         >
-          <VideoPanel />
+          <VideoPanel participant={participant} videoTrackRef={videoTrackRef} />
         </FloatingWindow>
       )}
 
@@ -369,7 +371,7 @@ const AgentCard = ({ participant, isExpanded }) => {
                   Cerrar flotante
                 </button>
               </div>
-            ) : <VideoPanel />}
+            ) : <VideoPanel participant={participant} videoTrackRef={videoTrackRef} />}
 
             {/* ── Barra de controles inferior estilo YouTube ── */}
             <div className="absolute inset-x-0 bottom-0 px-4 pb-3 pt-8 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">

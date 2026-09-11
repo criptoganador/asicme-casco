@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Wifi, ChevronDown, ChevronUp } from 'lucide-react';
+import { Shield, Wifi, Usb, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { registerPlugin } from '@capacitor/core';
 
 const UvcCamera = registerPlugin('UvcCamera');
@@ -8,20 +8,35 @@ const LoginView = ({ onConnect }) => {
   const [agentName, setAgentName] = useState('');
   const [showIpOptions, setShowIpOptions] = useState(false);
   const [ipCamUrl, setIpCamUrl] = useState('');
+  const [usbError, setUsbError] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (agentName.trim().length > 0) {
       if (!ipCamUrl.trim()) {
+        setSearching(true);
+        setUsbError(false);
         try {
           const res = await UvcCamera.startCamera();
-          onConnect(agentName.trim(), res.streamUrl, true);
+          const deviceInfo = res.deviceType ? {
+            type:         res.deviceType    || 'Dispositivo de video USB',
+            brand:        res.deviceBrand   || 'Desconocido',
+            product:      res.deviceProduct || '',
+            manufacturer: res.manufacturer  || '',
+            vidPid:       res.vidPid        || '',
+            codec:        res.codec         || 'Detectando...',
+            transferType: res.transferType  || '?',
+          } : null;
+          onConnect(agentName.trim(), res.streamUrl, deviceInfo);
         } catch (error) {
-          console.warn("Cámara UVC no iniciada o no encontrada, usando cámara trasera:", error);
-          onConnect(agentName.trim(), '', false);
+          console.warn('Cámara UVC no encontrada:', error);
+          setUsbError(true);
+        } finally {
+          setSearching(false);
         }
       } else {
-        onConnect(agentName.trim(), ipCamUrl.trim(), false);
+        onConnect(agentName.trim(), ipCamUrl.trim(), null);
       }
     }
   };
@@ -90,14 +105,52 @@ const LoginView = ({ onConnect }) => {
             </div>
           )}
 
+          {/* Aviso USB OTG requerido */}
+          {!showIpOptions && (
+            <div className="flex items-center gap-2 bg-zinc-900/60 border border-zinc-700/50 rounded-xl px-4 py-2.5">
+              <Usb className="w-4 h-4 text-sky-400 flex-shrink-0" />
+              <p className="text-xs text-zinc-400">
+                Conecta tu cámara USB por el puerto OTG antes de presionar <span className="text-sky-400 font-semibold">Conectar</span>.
+              </p>
+            </div>
+          )}
+
+          {/* Error: cámara USB no encontrada */}
+          {usbError && (
+            <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 animate-in slide-in-from-top-2 duration-200">
+              <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-300">Cámara USB no detectada</p>
+                <p className="text-xs text-amber-400/80 mt-1">
+                  Verifica que la cámara esté conectada al puerto OTG y que el adaptador esté bien insertado, luego vuelve a intentarlo.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setUsbError(false)}
+                  className="mt-2 text-xs text-amber-400 underline"
+                >
+                  Reintentar
+                </button>
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={!agentName.trim()}
-            className="w-full bg-emerald-600 text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-emerald-900/40 hover:bg-emerald-500 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 mt-4"
+            disabled={!agentName.trim() || searching}
+            className="w-full bg-emerald-600 text-white font-bold text-lg py-4 rounded-2xl shadow-lg shadow-emerald-900/40 hover:bg-emerald-500 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 mt-4 flex items-center justify-center gap-3"
           >
-            Conectar al Centro de Mando
+            {searching ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Buscando cámara USB...
+              </>
+            ) : (
+              'Conectar al Centro de Mando'
+            )}
           </button>
         </form>
+
       </div>
     </div>
   );
