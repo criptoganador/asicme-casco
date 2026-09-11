@@ -43,8 +43,8 @@ public class UvcForegroundService extends Service {
             startForeground(NOTIFICATION_ID, notification);
         }
 
-        // START_STICKY asegura que si el sistema lo mata (extrema falta de RAM), intente revivirlo
-        return START_STICKY;
+        // START_NOT_STICKY para evitar servicios zombies al cerrar la app
+        return START_NOT_STICKY;
     }
 
     @Override

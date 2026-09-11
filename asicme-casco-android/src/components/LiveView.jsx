@@ -289,7 +289,34 @@ const LiveView = ({
     };
   }, [rtspUrl, localParticipant]);
 
-  const handleHangUp = () => { room.disconnect(); onDisconnect(); };
+  // Limpieza total del hardware de la cámara al desmontar la vista
+  useEffect(() => {
+    return () => {
+      try { UvcCamera.stopCamera(); } catch (e) {}
+    };
+  }, []);
+
+  // Si el sensor se reactiva a ACTIVO tras haber estado en reposo, refrescar img tag
+  useEffect(() => {
+    if (sensorStatus?.status === 'ACTIVO' && ipMediaRef.current && rtspUrl) {
+      const media = ipMediaRef.current;
+      if (media.tagName === 'IMG') {
+        const timeout = setTimeout(() => {
+          if (media.naturalWidth === 0) {
+            console.log('🔄 [Relay] Refrescando stream MJPEG reactivado...');
+            media.src = rtspUrl + '?t=' + Date.now();
+          }
+        }, 300);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [sensorStatus?.status, rtspUrl]);
+
+  const handleHangUp = () => {
+    try { UvcCamera.stopCamera(); } catch (e) {}
+    room.disconnect();
+    onDisconnect();
+  };
 
   return (
     <div className="flex flex-col h-full bg-zinc-950">

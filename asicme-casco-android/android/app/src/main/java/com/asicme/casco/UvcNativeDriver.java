@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
-import android.graphics.SurfaceTexture;
 import android.graphics.YuvImage;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
@@ -13,7 +12,6 @@ import android.hardware.usb.UsbInterface;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.Surface;
 
 import com.serenegiant.usb.IFrameCallback;
 import com.serenegiant.usb.Size;
@@ -46,8 +44,6 @@ public class UvcNativeDriver {
     private int previewWidth = 640;
     private int previewHeight = 480;
     private boolean useMjpegMode = false;
-    private SurfaceTexture mDummySurfaceTexture = null;
-    private Surface mDummySurface = null;
     private UsbDevice mCurrentDevice = null;
 
     // ─── DeviceInfo ──────────────────────────────────────────────────────────────
@@ -222,6 +218,15 @@ public class UvcNativeDriver {
             } else {
                 Log.i(TAG, "Permiso ya otorgado previamente. Conectando directamente...");
                 try {
+                    if (mUvcCamera != null) {
+                        try { mUvcCamera.stopPreview(); } catch (Exception ignored) {}
+                        try { mUvcCamera.destroy(); } catch (Exception ignored) {}
+                        mUvcCamera = null;
+                    }
+                    if (mCurrentCtrlBlock != null) {
+                        try { mCurrentCtrlBlock.close(); } catch (Exception ignored) {}
+                        mCurrentCtrlBlock = null;
+                    }
                     USBMonitor.UsbControlBlock ctrlBlock = mUsbMonitor.openDevice(targetDevice);
                     if (ctrlBlock != null) {
                         mCurrentCtrlBlock = ctrlBlock;
@@ -246,22 +251,15 @@ public class UvcNativeDriver {
         mCurrentCtrlBlock = ctrlBlock;
         new Thread(() -> {
             try {
-                cerrarCamara();
+                if (mUvcCamera != null) {
+                    try { mUvcCamera.stopPreview(); } catch (Exception ignored) {}
+                    try { mUvcCamera.destroy(); } catch (Exception ignored) {}
+                    mUvcCamera = null;
+                }
 
                 mUvcCamera = new UVCCamera();
                 Log.i(TAG, "Invocando mUvcCamera.open(ctrlBlock) - Traspasando file descriptor a libusb C...");
                 mUvcCamera.open(ctrlBlock);
-
-                // Conectar SurfaceTexture fuera de pantalla (ANativeWindow) para asegurar que el pipeline nativo de libuvc fluya
-                try {
-                    if (mDummySurfaceTexture == null) {
-                        mDummySurfaceTexture = new SurfaceTexture(10);
-                        mDummySurface = new Surface(mDummySurfaceTexture);
-                    }
-                    mUvcCamera.setPreviewDisplay(mDummySurface);
-                } catch (Exception es) {
-                    Log.w(TAG, "Dummy preview surface: " + es.getMessage());
-                }
 
                 // 0. Consultar resoluciones soportadas por hardware en BisonCam / cámara UVC
                 try {
@@ -443,29 +441,45 @@ public class UvcNativeDriver {
     }
 
     public void forzarEncendidoSensor() {
-        Log.i(TAG, "Forzando reactivación y despertar de sensor UVC (alternando modo MJPEG/YUYV)...");
+        Log.i(TAG, "Forzando reactivación y despertar de sensor UVC (modo seguro)...");
         if (listener != null) {
             mainHandler.post(() -> listener.onSensorStatusChanged("ENCENDIENDO", 0, 0, "Reactivando sensor de cámara..."));
         }
         useMjpegMode = !useMjpegMode;
-        if (mCurrentDevice != null && mUsbMonitor != null) {
+
+        new Thread(() -> {
             try {
-                USBMonitor.UsbControlBlock ctrlBlock = mUsbMonitor.openDevice(mCurrentDevice);
-                if (ctrlBlock != null) {
-                    mCurrentCtrlBlock = ctrlBlock;
-                    iniciarCamaraNativa(ctrlBlock, mCurrentDevice);
-                } else if (mCurrentCtrlBlock != null) {
-                    iniciarCamaraNativa(mCurrentCtrlBlock, mCurrentDevice);
-                } else {
-                    buscarCamaraUVC();
+                // 1. Si la cámara está viva, intentar reactivación suave de preview
+                if (mUvcCamera != null) {
+                    try {
+                        mUvcCamera.stopPreview();
+                    } catch (Exception ignored) {}
+
+                    try {
+                        int format = useMjpegMode ? UVCCamera.FRAME_FORMAT_MJPEG : UVCCamera.DEFAULT_PREVIEW_MODE;
+                        mUvcCamera.setPreviewSize(previewWidth, previewHeight, format);
+                        mUvcCamera.updateCameraParams();
+                        mUvcCamera.startPreview();
+                        isPreviewing.set(true);
+                        Log.i(TAG, "Sensor despertado exitosamente mediante actualización de parámetros!");
+                        return;
+                    } catch (Exception eSoft) {
+                        Log.w(TAG, "Reactivación suave no disponible, procediendo con reinicio limpio: " + eSoft.getMessage());
+                    }
                 }
+
+                // 2. Reinicio completo y secuencial garantizando liberación del bus USB
+                cerrarCamara();
+                try {
+                    Thread.sleep(300);
+                } catch (InterruptedException ignored) {}
+
+                mainHandler.post(this::buscarCamaraUVC);
             } catch (Exception e) {
-                Log.w(TAG, "Error forzando encendido: " + e.getMessage());
-                buscarCamaraUVC();
+                Log.e(TAG, "Error forzando encendido: " + e.getMessage(), e);
+                mainHandler.post(this::buscarCamaraUVC);
             }
-        } else {
-            buscarCamaraUVC();
-        }
+        }, "UvcNative-ForceWakeThread").start();
     }
 
     // ─── Controles de Hardware UVC (BisonCam / saki4510t) ────────────────────────
@@ -699,31 +713,21 @@ public class UvcNativeDriver {
                 mUvcCamera.stopPreview();
             } catch (Exception ignored) {}
             try {
-                mUvcCamera.close();
-            } catch (Exception ignored) {}
-            try {
                 mUvcCamera.destroy();
             } catch (Exception ignored) {}
             mUvcCamera = null;
         }
-    }
 
-    public synchronized void destruir() {
-        cerrarCamara();
-        if (mDummySurface != null) {
-            try { mDummySurface.release(); } catch (Exception ignored) {}
-            mDummySurface = null;
-        }
-        if (mDummySurfaceTexture != null) {
-            try { mDummySurfaceTexture.release(); } catch (Exception ignored) {}
-            mDummySurfaceTexture = null;
-        }
         if (mCurrentCtrlBlock != null) {
             try {
                 mCurrentCtrlBlock.close();
             } catch (Exception ignored) {}
             mCurrentCtrlBlock = null;
         }
+    }
+
+    public synchronized void destruir() {
+        cerrarCamara();
         if (mUsbMonitor != null) {
             try {
                 mUsbMonitor.unregister();

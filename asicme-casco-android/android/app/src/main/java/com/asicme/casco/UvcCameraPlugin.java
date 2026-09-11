@@ -271,14 +271,34 @@ public class UvcCameraPlugin extends Plugin {
         }
     }
 
+    @PluginMethod
+    public void stopCamera(PluginCall call) {
+        if (nativeDriver != null) {
+            nativeDriver.cerrarCamara();
+        }
+        if (mjpegServer != null) {
+            mjpegServer.stop();
+        }
+        try {
+            Intent serviceIntent = new Intent(getContext(), UvcForegroundService.class);
+            getContext().stopService(serviceIntent);
+        } catch (Exception ignored) {}
+
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
+
     @Override
     protected void handleOnDestroy() {
         if (nativeDriver != null) nativeDriver.destruir();
         if (mjpegServer != null) mjpegServer.stop();
         
         // Apagar Escudo Protector
-        Intent serviceIntent = new Intent(getContext(), UvcForegroundService.class);
-        getContext().stopService(serviceIntent);
+        try {
+            Intent serviceIntent = new Intent(getContext(), UvcForegroundService.class);
+            getContext().stopService(serviceIntent);
+        } catch (Exception ignored) {}
         
         super.handleOnDestroy();
     }
